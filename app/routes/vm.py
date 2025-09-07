@@ -4,6 +4,7 @@ from ..models.vm import VM
 from ..models.owner import Owner
 from ..models.tag import Tag
 from .. import db
+from ..utils.audit import log_audit_event
 
 vm_bp = Blueprint('vm', __name__)
 
@@ -74,6 +75,8 @@ def assign_vm_owners(vm_id: str):
             db.session.flush()
         new_owners.append(owner)
     vm.owners = new_owners
+    detail_owners = ','.join([o.email for o in vm.owners])
+    log_audit_event(action='vm.assign_owners', entity='vm', entity_id=vm.id, details=f"owners={detail_owners}")
     db.session.commit()
     return jsonify({'status': 'ok', 'owners': [ {'id': o.id, 'name': o.name, 'email': o.email } for o in vm.owners ]})
 
@@ -95,6 +98,8 @@ def assign_vm_tags(vm_id: str):
             db.session.flush()
         new_tags.append(tag)
     vm.tags = new_tags
+    detail_tags = ','.join([t.name for t in vm.tags])
+    log_audit_event(action='vm.assign_tags', entity='vm', entity_id=vm.id, details=f"tags={detail_tags}")
     db.session.commit()
     return jsonify({'status': 'ok', 'tags': [ {'id': t.id, 'name': t.name } for t in vm.tags ]})
 

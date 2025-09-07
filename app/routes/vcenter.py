@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify
 from flask_login import login_required
 from ..models.vcenter import VCenterConfig
+from ..utils.audit import log_audit_event
 from .. import db, scheduler
 from ..scheduler.tasks import sync_vcenter_job
 import threading
@@ -35,6 +36,7 @@ def create_config():
         disable_ssl=disable_ssl, enabled=enabled
     )
     db.session.add(cfg)
+    log_audit_event(action='vcenter.create', entity='vcenter', entity_id=cfg.id, details=f"name={cfg.name}, host={cfg.host}")
     db.session.commit()
     flash('vCenter configuration created successfully', 'success')
     return redirect(url_for('vcenter.list_configs'))
@@ -50,6 +52,7 @@ def edit_config(cfg_id):
         cfg.password = request.form.get('password')
     cfg.disable_ssl = bool(request.form.get('disable_ssl'))
     cfg.enabled = bool(request.form.get('enabled'))
+    log_audit_event(action='vcenter.update', entity='vcenter', entity_id=cfg.id, details=f"name={cfg.name}, host={cfg.host}")
     db.session.commit()
     flash('vCenter configuration updated successfully', 'success')
     return redirect(url_for('vcenter.list_configs'))
@@ -72,8 +75,12 @@ def test_connection(cfg_id):
             sslContext=context
         )
         Disconnect(si)
+        log_audit_event(action='vcenter.test_connection', entity='vcenter', entity_id=cfg.id, details='success')
+        db.session.commit()
         return jsonify({'status': 'success', 'message': 'Connection successful'})
     except Exception as e:
+        log_audit_event(action='vcenter.test_connection', entity='vcenter', entity_id=cfg.id, details=f'error: {str(e)}')
+        db.session.commit()
         return jsonify({'status': 'error', 'message': f'Connection failed: {str(e)}'})
 
 @vcenter_bp.route('/toggle/<int:cfg_id>', methods=['POST'])
@@ -81,6 +88,7 @@ def test_connection(cfg_id):
 def toggle_config(cfg_id):
     cfg = VCenterConfig.query.get_or_404(cfg_id)
     cfg.enabled = not cfg.enabled
+    log_audit_event(action='vcenter.toggle', entity='vcenter', entity_id=cfg.id, details=f"enabled={cfg.enabled}")
     db.session.commit()
     flash(f"vCenter configuration {'enabled' if cfg.enabled else 'disabled'}", 'success')
     return redirect(url_for('vcenter.list_configs'))
@@ -99,6 +107,8 @@ def manual_sync():
     thread = threading.Thread(target=run_sync, args=(current_app._get_current_object(),))
     thread.daemon = True
     thread.start()
+    log_audit_event(action='vcenter.sync', entity='vcenter', entity_id=None, details='manual sync triggered')
+    db.session.commit()
     flash('Sync started in background', 'info')
     return redirect(url_for('vcenter.list_configs'))
 
@@ -106,7 +116,10 @@ def manual_sync():
 @login_required
 def delete_config(cfg_id):
     cfg = VCenterConfig.query.get_or_404(cfg_id)
+    cid = cfg.id
+    cname = cfg.name
     db.session.delete(cfg)
+    log_audit_event(action='vcenter.delete', entity='vcenter', entity_id=cid, details=f"name={cname}")
     db.session.commit()
     flash('vCenter configuration deleted successfully', 'success')
     return redirect(url_for('vcenter.list_configs'))

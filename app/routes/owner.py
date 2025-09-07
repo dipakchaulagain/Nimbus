@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required
 from ..models.owner import Owner
+from ..utils.audit import log_audit_event
 from .. import db
 
 owner_bp = Blueprint('owner', __name__)
@@ -34,6 +35,7 @@ def owners_api_create():
         return jsonify({'error': 'Name and Email are required'}), 400
     o = Owner(name=name, email=email, department=department)
     db.session.add(o)
+    log_audit_event(action='owner.create', entity='owner', entity_id=o.id, details=f"name={o.name}, email={o.email}")
     db.session.commit()
     return jsonify({'id': o.id}), 201
 
@@ -46,6 +48,7 @@ def owners_api_update(owner_id: int):
     if 'name' in data: o.name = (data['name'] or '').strip()
     if 'email' in data: o.email = (data['email'] or '').strip()
     if 'department' in data: o.department = (data['department'] or '').strip()
+    log_audit_event(action='owner.update', entity='owner', entity_id=o.id, details=f"name={o.name}, email={o.email}")
     db.session.commit()
     return jsonify({'status': 'ok'})
 
@@ -54,7 +57,11 @@ def owners_api_update(owner_id: int):
 @login_required
 def owners_api_delete(owner_id: int):
     o = Owner.query.get_or_404(owner_id)
+    oid = o.id
+    oname = o.name
+    oemail = o.email
     db.session.delete(o)
+    log_audit_event(action='owner.delete', entity='owner', entity_id=oid, details=f"name={oname}, email={oemail}")
     db.session.commit()
     return jsonify({'status': 'deleted'})
 

@@ -284,6 +284,12 @@
               Admins
             </a>
           </li>
+          <li class="nav-item">
+            <a class="nav-link{% if request.path.startswith('/audit') %} active{% endif %}" href="/audit/">
+              <i class="bi bi-clipboard-check"></i>
+              Audit Logs
+            </a>
+          </li>
         </ul>
         
         <!-- Sidebar Footer -->

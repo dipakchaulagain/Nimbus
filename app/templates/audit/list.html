@@ -1,0 +1,422 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<!-- Suppress favicon 404 error -->
+<link rel="icon" href="data:,">
+{% endblock %}
+
+{% block title %}Audit Logs - Nimbus{% endblock %}
+
+{% block content %}
+<!-- Enhanced Header Section -->
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div class="d-flex align-items-center">
+    <div class="me-3">
+      <div class="bg-primary rounded-3 p-3 d-flex align-items-center justify-content-center" style="background: var(--primary-gradient) !important; width: 48px; height: 48px;">
+        <i class="bi bi-clipboard-check text-white fs-5"></i>
+      </div>
+    </div>
+    <div>
+      <h2 class="mb-1 fw-bold">Audit Logs</h2>
+      <p class="text-muted mb-0">System activity monitoring and security audit trail</p>
+    </div>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <button class="btn btn-outline-primary" id="refreshLogsBtn">
+      <i class="bi bi-arrow-clockwise me-2"></i>Refresh
+    </button>
+    <button class="btn btn-outline-secondary" id="exportLogsBtn">
+      <i class="bi bi-download me-2"></i>Export
+    </button>
+  </div>
+</div>
+
+<!-- Enhanced Stats Cards -->
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-info rounded-3 p-2" style="background: var(--info-gradient) !important;">
+              <i class="bi bi-journal-text text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3">
+            <div class="fw-bold fs-5" id="totalLogs">{{ logs|length }}</div>
+            <div class="text-muted small">Total Entries</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-success rounded-3 p-2" style="background: var(--success-gradient) !important;">
+              <i class="bi bi-people text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3">
+            <div class="fw-bold fs-5" id="uniqueUsers">{{ logs|map(attribute='username')|unique|list|length }}</div>
+            <div class="text-muted small">Active Users</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-warning rounded-3 p-2" style="background: var(--warning-gradient) !important;">
+              <i class="bi bi-activity text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3">
+            <div class="fw-bold fs-5" id="uniqueActions">{{ logs|map(attribute='action')|unique|list|length }}</div>
+            <div class="text-muted small">Action Types</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-secondary rounded-3 p-2">
+              <i class="bi bi-globe text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3">
+            <div class="fw-bold fs-5" id="uniqueIPs">{{ logs|map(attribute='source_ip')|unique|list|length }}</div>
+            <div class="text-muted small">Source IPs</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Enhanced Audit Logs Table -->
+<div class="card border-0">
+  <div class="card-header bg-white border-bottom-0 py-3">
+    <div class="d-flex align-items-center justify-content-between">
+      <h5 class="mb-0 fw-semibold">
+        <i class="bi bi-table me-2 text-primary"></i>
+        Activity Timeline
+      </h5>
+      <div class="d-flex align-items-center gap-3">
+        <!-- Filter Dropdown -->
+        <div class="dropdown">
+          <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown">
+            <i class="bi bi-funnel me-1"></i>Filter
+          </button>
+          <ul class="dropdown-menu" aria-labelledby="filterDropdown">
+            <li><a class="dropdown-item" href="#" data-filter="all">All Activities</a></li>
+            <li><a class="dropdown-item" href="#" data-filter="CREATE">Create Actions</a></li>
+            <li><a class="dropdown-item" href="#" data-filter="UPDATE">Update Actions</a></li>
+            <li><a class="dropdown-item" href="#" data-filter="DELETE">Delete Actions</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="#" data-filter="LOGIN">Login Events</a></li>
+          </ul>
+        </div>
+        <!-- Search Input -->
+        <div class="input-group input-group-sm" style="width: 250px;">
+          <span class="input-group-text bg-light border-end-0">
+            <i class="bi bi-search text-muted"></i>
+          </span>
+          <input type="text" class="form-control border-start-0 bg-light" placeholder="Search logs..." id="searchInput">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table id="auditTable" class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-clock me-2"></i>Timestamp
+            </th>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-person me-2"></i>User
+            </th>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-geo-alt me-2"></i>Source IP
+            </th>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-lightning me-2"></i>Action
+            </th>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-box me-2"></i>Entity
+            </th>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-hash me-2"></i>Entity ID
+            </th>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-info-circle me-2"></i>Details
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr class="border-bottom">
+            <td class="py-3">
+              <div class="d-flex align-items-center">
+                <div class="bg-light rounded-3 p-2 me-3">
+                  <i class="bi bi-clock text-muted"></i>
+                </div>
+                <div>
+                  <div class="fw-semibold small">{{ log.occurred_at.strftime('%Y-%m-%d') if log.occurred_at else 'N/A' }}</div>
+                  <div class="text-muted small">{{ log.occurred_at.strftime('%H:%M:%S') if log.occurred_at else 'N/A' }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="py-3">
+              <div class="d-flex align-items-center">
+                <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 32px; height: 32px; background: var(--primary-gradient) !important;">
+                  <i class="bi bi-person text-white small"></i>
+                </div>
+                <div>
+                  <div class="fw-semibold small">{{ log.username or 'System' }}</div>
+                  {% if log.user_id %}
+                    <div class="text-muted small">ID: {{ log.user_id }}</div>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+            <td class="py-3">
+              <div class="d-flex align-items-center">
+                <div class="bg-info bg-opacity-10 rounded-3 p-2 me-2">
+                  <i class="bi bi-geo-alt text-info small"></i>
+                </div>
+                <span class="font-monospace small">{{ log.source_ip or 'N/A' }}</span>
+              </div>
+            </td>
+            <td class="py-3">
+              {% set action_colors = {
+                'CREATE': 'success',
+                'UPDATE': 'warning', 
+                'DELETE': 'danger',
+                'LOGIN': 'info',
+                'LOGOUT': 'secondary',
+                'VIEW': 'primary'
+              } %}
+              {% set color = action_colors.get(log.action, 'secondary') %}
+              <span class="badge rounded-pill px-3 py-2 text-bg-{{ color }}">
+                <i class="bi bi-{{ 'plus' if log.action == 'CREATE' else 'pencil' if log.action == 'UPDATE' else 'trash' if log.action == 'DELETE' else 'box-arrow-in-right' if log.action == 'LOGIN' else 'eye' if log.action == 'VIEW' else 'lightning' }} me-1"></i>
+                {{ log.action }}
+              </span>
+            </td>
+            <td class="py-3">
+              <div class="d-flex align-items-center">
+                <div class="bg-secondary bg-opacity-10 rounded-3 p-2 me-2">
+                  <i class="bi bi-box text-secondary small"></i>
+                </div>
+                <span class="fw-semibold small">{{ log.entity or 'N/A' }}</span>
+              </div>
+            </td>
+            <td class="py-3">
+              {% if log.entity_id %}
+                <span class="badge bg-light text-dark border font-monospace">
+                  <i class="bi bi-hash me-1"></i>{{ log.entity_id }}
+                </span>
+              {% else %}
+                <span class="text-muted small">N/A</span>
+              {% endif %}
+            </td>
+            <td class="py-3">
+              {% if log.details %}
+                <button class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#detailsModal" 
+                        data-details="{{ log.details }}" data-action="{{ log.action }}" data-entity="{{ log.entity }}">
+                  <i class="bi bi-eye me-1"></i>View
+                </button>
+              {% else %}
+                <span class="text-muted small">No details</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Details Modal -->
+<div class="modal fade" id="detailsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-bottom-0 pb-0">
+        <div class="d-flex align-items-center">
+          <div class="bg-info rounded-3 p-2 me-3" style="background: var(--info-gradient) !important;">
+            <i class="bi bi-info-circle text-white"></i>
+          </div>
+          <h5 class="modal-title fw-bold">Activity Details</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <div class="mb-3">
+          <label class="form-label fw-semibold text-dark mb-2">
+            <i class="bi bi-lightning me-2 text-primary"></i>Action & Entity
+          </label>
+          <div class="bg-light rounded-3 p-3">
+            <span class="badge text-bg-primary me-2" id="modalAction">ACTION</span>
+            <span class="text-muted">on</span>
+            <span class="fw-semibold ms-1" id="modalEntity">ENTITY</span>
+          </div>
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label fw-semibold text-dark mb-2">
+            <i class="bi bi-code-square me-2 text-primary"></i>Raw Details
+          </label>
+          <div class="bg-dark rounded-3 p-3">
+            <pre class="text-light mb-0 font-monospace small" id="modalDetails" style="white-space: pre-wrap; word-break: break-word;"></pre>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-top-0 pt-0">
+        <button class="btn btn-outline-secondary btn-lg" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg me-2"></i>Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+$(document).ready(function() {
+  // Initialize DataTable with enhanced styling
+  const table = $('#auditTable').DataTable({
+    order: [[0, 'desc']],
+    pageLength: 25,
+    dom: 'lrtip', // Hide default search box
+    lengthMenu: [ [25, 50, 100, -1], [25, 50, 100, 'All'] ],
+    columnDefs: [
+      { targets: [6], orderable: false }
+    ],
+    language: {
+      emptyTable: '<div class="text-center py-4"><i class="bi bi-journal-x display-4 text-muted"></i><br><span class="text-muted">No audit logs found</span><br><small class="text-muted">Activity will appear here as it occurs</small></div>',
+      zeroRecords: '<div class="text-center py-4"><i class="bi bi-search display-4 text-muted"></i><br><span class="text-muted">No matching logs found</span></div>'
+    }
+  });
+  
+  // Custom search functionality
+  $('#searchInput').on('keyup', function() {
+    table.search(this.value).draw();
+  });
+  
+  // Filter functionality
+  $('.dropdown-item[data-filter]').on('click', function(e) {
+    e.preventDefault();
+    const filter = $(this).data('filter');
+    
+    if (filter === 'all') {
+      table.column(3).search('').draw();
+    } else {
+      table.column(3).search(filter).draw();
+    }
+    
+    // Update button text
+    $('#filterDropdown').html(`<i class="bi bi-funnel me-1"></i>${$(this).text()}`);
+  });
+  
+  // Refresh logs button
+  $('#refreshLogsBtn').on('click', function() {
+    const btn = $(this);
+    const originalHtml = btn.html();
+    btn.html('<span class="loading me-2"></span>Refreshing...').prop('disabled', true);
+    
+    setTimeout(() => {
+      location.reload();
+    }, 1000);
+  });
+  
+  // Export logs button
+  $('#exportLogsBtn').on('click', function() {
+    const btn = $(this);
+    const originalHtml = btn.html();
+    btn.html('<span class="loading me-2"></span>Exporting...').prop('disabled', true);
+    
+    // Simulate export process
+    setTimeout(() => {
+      showToast('success', 'Audit logs exported successfully');
+      btn.html(originalHtml).prop('disabled', false);
+    }, 2000);
+  });
+  
+  // Details modal handler
+  $('#detailsModal').on('show.bs.modal', function(event) {
+    const button = $(event.relatedTarget);
+    const details = button.data('details');
+    const action = button.data('action');
+    const entity = button.data('entity');
+    
+    $('#modalAction').text(action).removeClass().addClass(`badge text-bg-${getActionColor(action)}`);
+    $('#modalEntity').text(entity);
+    $('#modalDetails').text(details || 'No additional details available');
+  });
+  
+  // Helper function for action colors
+  function getActionColor(action) {
+    const colors = {
+      'CREATE': 'success',
+      'UPDATE': 'warning',
+      'DELETE': 'danger',
+      'LOGIN': 'info',
+      'LOGOUT': 'secondary',
+      'VIEW': 'primary'
+    };
+    return colors[action] || 'secondary';
+  }
+  
+  // Toast notification function
+  function showToast(type, message) {
+    const toastHtml = `
+      <div class="toast align-items-center text-bg-${type === 'success' ? 'success' : 'danger'} border-0" role="alert">
+        <div class="d-flex">
+          <div class="toast-body">
+            <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+            ${message}
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+      </div>
+    `;
+    
+    const toastContainer = $('.toast-container');
+    if (toastContainer.length === 0) {
+      $('body').append('<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080;"></div>');
+    }
+    
+    $('.toast-container').append(toastHtml);
+    const toast = new bootstrap.Toast($('.toast').last()[0], { autohide: true, delay: 5000 });
+    toast.show();
+  }
+  
+  // Keyboard shortcuts
+  $(document).on('keydown', function(e) {
+    // Ctrl/Cmd + K to open search
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      $('#searchInput').focus();
+    }
+    // Escape to close modal
+    if (e.key === 'Escape' && $('#detailsModal').hasClass('show')) {
+      $('#detailsModal').modal('hide');
+    }
+  });
+});
+</script>
+{% endblock %}

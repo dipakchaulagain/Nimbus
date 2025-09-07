@@ -27,6 +27,7 @@ def create_app():
     from .routes.tag import tag_bp
     from .routes.vcenter import vcenter_bp
     from .routes.admin import admin_bp
+    from .routes.audit import audit_bp
     from .routes.report import report_bp
 
     app.register_blueprint(auth_bp)
@@ -36,9 +37,15 @@ def create_app():
     app.register_blueprint(vcenter_bp, url_prefix='/vcenter')
     app.register_blueprint(report_bp, url_prefix='/reports')
     app.register_blueprint(admin_bp, url_prefix='/admins')
+    app.register_blueprint(audit_bp, url_prefix='/audit')
 
     # Create database tables if they don't exist
     with app.app_context():
+        # Ensure all models are imported so SQLAlchemy is aware before create_all
+        try:
+            from .models.audit import AuditLog  # noqa: F401
+        except Exception:
+            pass
         try:
             db.create_all()
         except Exception as e:
