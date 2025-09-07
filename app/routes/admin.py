@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required
+from ..utils.roles import require_roles
 from ..models.admin import Admin
 from .. import db
 
@@ -9,6 +10,7 @@ admin_bp = Blueprint('admin', __name__)
 
 @admin_bp.route('/')
 @login_required
+@require_roles('superadmin')
 def list_admins():
     admins = Admin.query.order_by(Admin.username.asc()).all()
     return render_template('admins/list.html', admins=admins)
@@ -16,6 +18,7 @@ def list_admins():
 
 @admin_bp.route('/api', methods=['POST'])
 @login_required
+@require_roles('superadmin')
 def admin_create():
     data = request.get_json() or {}
     username = (data.get('username') or '').strip()

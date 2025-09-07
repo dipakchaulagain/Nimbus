@@ -278,6 +278,7 @@
               vCenter
             </a>
           </li>
+          {% if current_user.role == 'superadmin' %}
           <li class="nav-item">
             <a class="nav-link{% if request.path.startswith('/admins') %} active{% endif %}" href="/admins/">
               <i class="bi bi-shield-check"></i>
@@ -290,6 +291,7 @@
               Audit Logs
             </a>
           </li>
+          {% endif %}
         </ul>
         
         <!-- Sidebar Footer -->

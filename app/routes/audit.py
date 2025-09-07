@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required
+from ..utils.roles import require_roles
 from ..models.audit import AuditLog
 
 
@@ -8,6 +9,7 @@ audit_bp = Blueprint('audit', __name__)
 
 @audit_bp.route('/')
 @login_required
+@require_roles('superadmin')
 def list_audit():
     logs = AuditLog.query.order_by(AuditLog.occurred_at.desc()).limit(500).all()
     return render_template('audit/list.html', logs=logs)
@@ -15,6 +17,7 @@ def list_audit():
 
 @audit_bp.route('/api')
 @login_required
+@require_roles('superadmin')
 def audit_api():
     q = AuditLog.query
     action = (request.args.get('action') or '').strip()

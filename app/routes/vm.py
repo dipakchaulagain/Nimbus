@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, jsonify, request
 from flask_login import login_required
+from ..utils.roles import require_roles
 from ..models.vm import VM
 from ..models.owner import Owner
 from ..models.tag import Tag
@@ -59,6 +60,7 @@ def vm_detail(vm_id: str):
 
 @vm_bp.route('/<string:vm_id>/owners', methods=['POST'])
 @login_required
+@require_roles('editor', 'superadmin')
 def assign_vm_owners(vm_id: str):
     vm = VM.query.get_or_404(vm_id)
     data = request.get_json() or {}
@@ -83,6 +85,7 @@ def assign_vm_owners(vm_id: str):
 
 @vm_bp.route('/<string:vm_id>/tags', methods=['POST'])
 @login_required
+@require_roles('editor', 'superadmin')
 def assign_vm_tags(vm_id: str):
     vm = VM.query.get_or_404(vm_id)
     data = request.get_json() or {}

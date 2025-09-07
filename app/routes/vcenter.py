@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify
 from flask_login import login_required
+from ..utils.roles import require_roles
 from ..models.vcenter import VCenterConfig
 from ..utils.audit import log_audit_event
 from .. import db, scheduler
@@ -19,6 +20,7 @@ def list_configs():
 
 @vcenter_bp.route('/create', methods=['POST'])
 @login_required
+@require_roles('superadmin')
 def create_config():
     name = request.form.get('name')
     host = request.form.get('host')
@@ -43,6 +45,7 @@ def create_config():
 
 @vcenter_bp.route('/edit/<int:cfg_id>', methods=['POST'])
 @login_required
+@require_roles('superadmin')
 def edit_config(cfg_id):
     cfg = VCenterConfig.query.get_or_404(cfg_id)
     cfg.name = request.form.get('name') or cfg.name
@@ -59,6 +62,7 @@ def edit_config(cfg_id):
 
 @vcenter_bp.route('/test/<int:cfg_id>', methods=['POST'])
 @login_required
+@require_roles('editor', 'superadmin')
 def test_connection(cfg_id):
     cfg = VCenterConfig.query.get_or_404(cfg_id)
     try:
@@ -85,6 +89,7 @@ def test_connection(cfg_id):
 
 @vcenter_bp.route('/toggle/<int:cfg_id>', methods=['POST'])
 @login_required
+@require_roles('superadmin')
 def toggle_config(cfg_id):
     cfg = VCenterConfig.query.get_or_404(cfg_id)
     cfg.enabled = not cfg.enabled
@@ -95,6 +100,7 @@ def toggle_config(cfg_id):
 
 @vcenter_bp.route('/sync')
 @login_required
+@require_roles('editor', 'superadmin')
 def manual_sync():
     def run_sync(app_instance):
         with app_instance.app_context():
@@ -114,6 +120,7 @@ def manual_sync():
 
 @vcenter_bp.route('/delete/<int:cfg_id>', methods=['POST'])
 @login_required
+@require_roles('superadmin')
 def delete_config(cfg_id):
     cfg = VCenterConfig.query.get_or_404(cfg_id)
     cid = cfg.id

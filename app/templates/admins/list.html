@@ -136,21 +136,21 @@
                   <i class="bi bi-person text-white"></i>
                 </div>
                 <div>
-                  <div class="fw-semibold">{{ a.username }}</div>
+                  <div class="fw-semibold" id="admin_username">{{ a.username }}</div>
                   <small class="text-muted">Admin User</small>
                 </div>
               </div>
             </td>
             <td class="py-3">
-              <div class="text-dark">{{ a.email }}</div>
+              <div class="text-dark" id="admin_email">{{ a.email }}</div>
             </td>
             <td class="py-3">
               {% if a.role == 'superadmin' %}
-                <span class="badge rounded-pill px-3 py-2" style="background: var(--success-gradient); color: white;">
+                <span class="badge rounded-pill px-3 py-2" style="background: var(--success-gradient); color: white;" id="admin_role">
                   <i class="bi bi-shield-fill-check me-1"></i>Super Admin
                 </span>
               {% elif a.role == 'editor' %}
-                <span class="badge rounded-pill px-3 py-2" style="background: var(--warning-gradient); color: white;">
+                <span class="badge rounded-pill px-3 py-2" style="background: var(--warning-gradient); color: white;" id="admin_role">
                   <i class="bi bi-pencil-fill me-1"></i>Editor
                 </span>
               {% else %}
@@ -276,13 +276,15 @@
     // Edit Admin Button
     $(document).on('click', '[data-action="edit"]', function(){
       const tr = $(this).closest('tr');
-      const data = table.row(tr).data();
+      const adminUsername = tr.find('td').eq(0).find('#admin_username').text().trim();
+      const adminEmail = tr.find('td').eq(1).find('#admin_email').text().trim();
+      const adminRole = tr.find('td').eq(2).find('#admin_role').text().trim();
       $('#adminModalTitle').text('Edit Admin');
       $('#adminModal .modal-header .bg-primary i').removeClass('bi-shield-plus').addClass('bi-shield-check');
       $('#adminId').val(tr.data('id'));
-      $('#adminUsername').val(data[0]);
-      $('#adminEmail').val(data[1]);
-      $('#adminRole').val(data[2]);
+      $('#adminUsername').val(adminUsername);
+      $('#adminEmail').val(adminEmail);
+      $('#adminRole').val(adminRole);
       $('#adminPassword').val('');
       modal.show();
     });

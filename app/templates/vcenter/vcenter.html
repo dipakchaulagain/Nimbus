@@ -15,12 +15,16 @@
     </div>
   </div>
   <div class="btn-group">
+    {% if current_user.role == 'superadmin' %}
     <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#createModal">
       <i class="bi bi-plus-lg me-2"></i>Add Configuration
     </button>
+    {% endif %}
+    {% if current_user.role in ['editor', 'superadmin'] %}
     <a href="/vcenter/sync" class="btn btn-outline-secondary btn-lg">
       <i class="bi bi-arrow-repeat me-2"></i>Run Sync
     </a>
+    {% endif %}
   </div>
 </div>
 
@@ -191,14 +195,19 @@
             </td>
             <td class="py-3 text-center">
               <div class="btn-group btn-group-sm">
+                {% if current_user.role == 'superadmin' %}
                 <button class="btn btn-outline-primary" data-action="edit" title="Edit Configuration"
                         onclick="editConfig('{{ c.id }}', '{{ c.name }}', '{{ c.host }}', '{{ c.username }}', {{ 'true' if c.disable_ssl else 'false' }}, {{ 'true' if c.enabled else 'false' }})">
                   <i class="bi bi-pencil"></i>
                 </button>
+                {% endif %}
+                {% if current_user.role in ['editor', 'superadmin'] %}
                 <button class="btn btn-outline-info" data-action="test" title="Test Connection"
                         onclick="testConnection('{{ c.id }}', '{{ c.host }}', '{{ c.username }}')">
                   <i class="bi bi-wifi"></i>
                 </button>
+                {% endif %}
+                {% if current_user.role == 'superadmin' %}
                 <button class="btn btn-outline-warning" data-action="toggle" title="{{ 'Disable' if c.enabled else 'Enable' }}"
                         onclick="toggleConfig('{{ c.id }}', '{{ c.name }}', {{ 'true' if c.enabled else 'false' }})">
                   <i class="bi bi-{{ 'pause' if c.enabled else 'play' }}"></i>
@@ -207,6 +216,7 @@
                         onclick="deleteConfig('{{ c.id }}', '{{ c.name }}')">
                   <i class="bi bi-trash"></i>
                 </button>
+                {% endif %}
               </div>
             </td>
           </tr>

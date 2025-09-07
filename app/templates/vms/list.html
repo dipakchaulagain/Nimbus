@@ -22,11 +22,15 @@
         <i class="bi bi-funnel me-2"></i>Bulk Actions
       </button>
       <ul class="dropdown-menu">
+        {% if current_user.role in ['editor', 'superadmin'] %}
         <li><a class="dropdown-item" href="#" onclick="bulkAction('power-on')"><i class="bi bi-play me-2"></i>Power On Selected</a></li>
         <li><a class="dropdown-item" href="#" onclick="bulkAction('power-off')"><i class="bi bi-stop me-2"></i>Power Off Selected</a></li>
+        {% endif %}
         <li><hr class="dropdown-divider"></li>
+        {% if current_user.role in ['editor', 'superadmin'] %}
         <li><a class="dropdown-item" href="#" onclick="bulkAction('assign-owners')"><i class="bi bi-people me-2"></i>Assign Owners</a></li>
         <li><a class="dropdown-item" href="#" onclick="bulkAction('assign-tags')"><i class="bi bi-tags me-2"></i>Assign Tags</a></li>
+        {% endif %}
       </ul>
     </div>
     <a href="/reports/summary" class="btn btn-outline-info btn-lg">
@@ -348,6 +352,7 @@
                         title="View Details">
                   <i class="bi bi-eye"></i>
                 </button>
+                {% if current_user.role in ['editor', 'superadmin'] %}
                 <button class="btn btn-outline-info" 
                         data-action="owners" 
                         data-vm-id="{{ vm.id }}"
@@ -360,24 +365,27 @@
                         title="Manage Tags">
                   <i class="bi bi-tags"></i>
                 </button>
+                {% endif %}
                 <div class="dropdown">
                   <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" title="More Actions">
                     <i class="bi bi-three-dots"></i>
                   </button>
                   <ul class="dropdown-menu">
-                    {% if vm.power_state == 'poweredOff' %}
-                    <li><a class="dropdown-item text-success" href="#" data-action="power-on" data-vm-id="{{ vm.id }}">
-                      <i class="bi bi-play me-2"></i>Power On
-                    </a></li>
-                    {% else %}
-                    <li><a class="dropdown-item text-warning" href="#" data-action="power-off" data-vm-id="{{ vm.id }}">
-                      <i class="bi bi-stop me-2"></i>Power Off
-                    </a></li>
+                    {% if current_user.role in ['editor', 'superadmin'] %}
+                      {% if vm.power_state == 'poweredOff' %}
+                      <li><a class="dropdown-item text-success" href="#" data-action="power-on" data-vm-id="{{ vm.id }}">
+                        <i class="bi bi-play me-2"></i>Power On
+                      </a></li>
+                      {% else %}
+                      <li><a class="dropdown-item text-warning" href="#" data-action="power-off" data-vm-id="{{ vm.id }}">
+                        <i class="bi bi-stop me-2"></i>Power Off
+                      </a></li>
+                      {% endif %}
+                      <li><hr class="dropdown-divider"></li>
+                      <li><a class="dropdown-item text-danger" href="#" data-action="delete" data-vm-id="{{ vm.id }}">
+                        <i class="bi bi-trash me-2"></i>Delete
+                      </a></li>
                     {% endif %}
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="#" data-action="delete" data-vm-id="{{ vm.id }}">
-                      <i class="bi bi-trash me-2"></i>Delete
-                    </a></li>
                   </ul>
                 </div>
               </div>

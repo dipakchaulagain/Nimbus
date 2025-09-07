@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required
+from ..utils.roles import require_roles
 from ..models.owner import Owner
 from ..utils.audit import log_audit_event
 from .. import db
@@ -26,6 +27,7 @@ def owners_api_list():
 
 @owner_bp.route('/api', methods=['POST'])
 @login_required
+@require_roles('editor', 'superadmin')
 def owners_api_create():
     data = request.get_json() or {}
     name = data.get('name', '').strip()
@@ -42,6 +44,7 @@ def owners_api_create():
 
 @owner_bp.route('/api/<int:owner_id>', methods=['PUT'])
 @login_required
+@require_roles('editor', 'superadmin')
 def owners_api_update(owner_id: int):
     o = Owner.query.get_or_404(owner_id)
     data = request.get_json() or {}
@@ -55,6 +58,7 @@ def owners_api_update(owner_id: int):
 
 @owner_bp.route('/api/<int:owner_id>', methods=['DELETE'])
 @login_required
+@require_roles('editor', 'superadmin')
 def owners_api_delete(owner_id: int):
     o = Owner.query.get_or_404(owner_id)
     oid = o.id

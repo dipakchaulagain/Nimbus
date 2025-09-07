@@ -13,9 +13,11 @@
       <p class="text-muted mb-0">Organize and categorize your virtual machines</p>
     </div>
   </div>
+  {% if current_user.role in ['editor', 'superadmin'] %}
   <button class="btn btn-primary btn-lg" id="addTagBtn">
     <i class="bi bi-plus-lg me-2"></i>Add Tag
   </button>
+  {% endif %}
 </div>
 
 <!-- Enhanced Stats Cards -->
@@ -102,9 +104,11 @@
             <th class="border-0 fw-semibold text-dark">
               <i class="bi bi-info-circle me-2"></i>Description
             </th>
+            {% if current_user.role in ['editor', 'superadmin'] %}
             <th class="border-0 fw-semibold text-dark text-center">
               <i class="bi bi-gear me-2"></i>Actions
             </th>
+            {% endif %}
           </tr>
         </thead>
         <tbody>
@@ -130,6 +134,7 @@
                 {% endif %}
               </div>
             </td>
+            {% if current_user.role in ['editor', 'superadmin'] %}
             <td class="py-3 text-center">
               <div class="btn-group btn-group-sm">
                 <button class="btn btn-outline-primary" data-action="edit" title="Edit Tag">
@@ -140,6 +145,7 @@
                 </button>
               </div>
             </td>
+            {% endif %}
           </tr>
           {% endfor %}
         </tbody>

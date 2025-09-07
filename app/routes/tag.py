@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required
+from ..utils.roles import require_roles
 from ..models.tag import Tag
 from ..utils.audit import log_audit_event
 from .. import db
@@ -26,6 +27,7 @@ def tags_api_list():
 
 @tag_bp.route('/api', methods=['POST'])
 @login_required
+@require_roles('editor', 'superadmin')
 def tags_api_create():
     data = request.get_json() or {}
     name = (data.get('name') or '').strip()
@@ -41,6 +43,7 @@ def tags_api_create():
 
 @tag_bp.route('/api/<int:tag_id>', methods=['PUT'])
 @login_required
+@require_roles('editor', 'superadmin')
 def tags_api_update(tag_id: int):
     t = Tag.query.get_or_404(tag_id)
     data = request.get_json() or {}
@@ -53,6 +56,7 @@ def tags_api_update(tag_id: int):
 
 @tag_bp.route('/api/<int:tag_id>', methods=['DELETE'])
 @login_required
+@require_roles('editor', 'superadmin')
 def tags_api_delete(tag_id: int):
     t = Tag.query.get_or_404(tag_id)
     tid = t.id
