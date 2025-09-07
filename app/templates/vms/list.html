@@ -1,0 +1,874 @@
+{% extends 'base.html' %}
+
+{% block title %}Virtual Machines - Nimbus VM Inventory{% endblock %}
+
+{% block content %}
+<!-- Enhanced Header Section -->
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div class="d-flex align-items-center">
+    <div class="me-3">
+      <div class="bg-primary rounded-3 p-3 d-flex align-items-center justify-content-center" style="background: var(--primary-gradient) !important; width: 48px; height: 48px;">
+        <i class="bi bi-hdd-network text-white fs-5"></i>
+      </div>
+    </div>
+    <div>
+      <h2 class="mb-1 fw-bold">Virtual Machines</h2>
+      <p class="text-muted mb-0">Manage and monitor your virtual machine inventory</p>
+    </div>
+  </div>
+  <div class="btn-group">
+    <div class="dropdown">
+      <button class="btn btn-outline-secondary btn-lg dropdown-toggle" type="button" data-bs-toggle="dropdown">
+        <i class="bi bi-funnel me-2"></i>Bulk Actions
+      </button>
+      <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="#" onclick="bulkAction('power-on')"><i class="bi bi-play me-2"></i>Power On Selected</a></li>
+        <li><a class="dropdown-item" href="#" onclick="bulkAction('power-off')"><i class="bi bi-stop me-2"></i>Power Off Selected</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="#" onclick="bulkAction('assign-owners')"><i class="bi bi-people me-2"></i>Assign Owners</a></li>
+        <li><a class="dropdown-item" href="#" onclick="bulkAction('assign-tags')"><i class="bi bi-tags me-2"></i>Assign Tags</a></li>
+      </ul>
+    </div>
+    <a href="/reports/summary" class="btn btn-outline-info btn-lg">
+      <i class="bi bi-file-earmark-text me-2"></i>Summary
+    </a>
+    <a href="/vms/api" class="btn btn-outline-primary btn-lg">
+      <i class="bi bi-code-square me-2"></i>API
+    </a>
+    <button class="btn btn-success btn-lg" onclick="refreshVMs()">
+      <i class="bi bi-arrow-clockwise me-2"></i>Refresh
+    </button>
+  </div>
+</div>
+
+<!-- Enhanced Statistics Cards -->
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-primary rounded-3 p-2" style="background: var(--primary-gradient) !important;">
+              <i class="bi bi-hdd-network text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3">
+            <div class="fw-bold fs-5" id="totalVMs">{{ vms|length }}</div>
+            <div class="text-muted small">Total VMs</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-success rounded-3 p-2" style="background: var(--success-gradient) !important;">
+              <i class="bi bi-toggle-on text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3">
+            <div class="fw-bold fs-5" id="poweredOnVMs">{{ vms|selectattr("power_state", "equalto", "poweredOn")|list|length }}</div>
+            <div class="text-muted small">Powered On</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-secondary rounded-3 p-2">
+              <i class="bi bi-toggle-off text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3">
+            <div class="fw-bold fs-5" id="poweredOffVMs">{{ vms|selectattr("power_state", "equalto", "poweredOff")|list|length }}</div>
+            <div class="text-muted small">Powered Off</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-info rounded-3 p-2" style="background: var(--info-gradient) !important;">
+              <i class="bi bi-check2-square text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3">
+            <div class="fw-bold fs-5" id="selectedVMs">0</div>
+            <div class="text-muted small">Selected</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Enhanced Advanced Filters & Search -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white border-bottom-0 py-3">
+    <h6 class="mb-0 fw-semibold">
+      <i class="bi bi-funnel me-2 text-primary"></i>
+      Advanced Filters
+    </h6>
+  </div>
+  <div class="card-body">
+    <div class="row g-3 align-items-end">
+      <div class="col-lg-3 col-md-6">
+        <label class="form-label fw-semibold text-dark mb-2">
+          <i class="bi bi-search me-2 text-primary"></i>Search VMs
+        </label>
+        <div class="input-group">
+          <span class="input-group-text bg-light border-end-0">
+            <i class="bi bi-search text-muted"></i>
+          </span>
+          <input id="filterName" class="form-control border-start-0" placeholder="Search by name..." />
+        </div>
+      </div>
+      
+      <div class="col-lg-2 col-md-6">
+        <label class="form-label fw-semibold text-dark mb-2">
+          <i class="bi bi-power me-2 text-primary"></i>Power State
+        </label>
+        <select id="filterPower" class="form-select">
+          <option value="">All States</option>
+          <option value="poweredOn">Powered On</option>
+          <option value="poweredOff">Powered Off</option>
+          <option value="suspended">Suspended</option>
+        </select>
+      </div>
+      
+      <div class="col-lg-2 col-md-6">
+        <label class="form-label fw-semibold text-dark mb-2">
+          <i class="bi bi-hdd-stack me-2 text-primary"></i>Hypervisor
+        </label>
+        <input id="filterHypervisor" class="form-control" placeholder="Filter by host..." />
+      </div>
+      
+      <div class="col-lg-2 col-md-6">
+        <label class="form-label fw-semibold text-dark mb-2">
+          <i class="bi bi-laptop me-2 text-primary"></i>OS Type
+        </label>
+        <select id="filterOS" class="form-select">
+          <option value="">All OS</option>
+          <option value="windows">Windows</option>
+          <option value="linux">Linux</option>
+          <option value="centos">CentOS</option>
+          <option value="ubuntu">Ubuntu</option>
+        </select>
+      </div>
+      
+      <div class="col-lg-2 col-md-6">
+        <label class="form-label fw-semibold text-dark mb-2">
+          <i class="bi bi-memory me-2 text-primary"></i>Memory Range
+        </label>
+        <select id="filterMemory" class="form-select">
+          <option value="">Any Size</option>
+          <option value="small">< 2GB</option>
+          <option value="medium">2GB - 8GB</option>
+          <option value="large">8GB - 16GB</option>
+          <option value="xlarge">> 16GB</option>
+        </select>
+      </div>
+      
+      <div class="col-lg-1 col-md-6">
+        <button id="clearFilters" class="btn btn-outline-secondary w-100 btn-lg" title="Clear all filters">
+          <i class="bi bi-funnel-fill"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Enhanced VM Table -->
+<div class="card border-0">
+  <div class="card-header bg-white border-bottom-0 py-3">
+    <div class="d-flex align-items-center justify-content-between">
+      <div class="d-flex align-items-center">
+        <div class="form-check me-3">
+          <input class="form-check-input" type="checkbox" id="selectAll">
+          <label class="form-check-label fw-semibold" for="selectAll">
+            Select All
+          </label>
+        </div>
+        <h5 class="mb-0 fw-semibold">
+          <i class="bi bi-table me-2 text-primary"></i>
+          Virtual Machine List
+        </h5>
+      </div>
+      
+      <div class="d-flex align-items-center">
+        <span class="text-muted me-3" id="tableInfo">Showing {{ vms|length }} virtual machines</span>
+        <div class="input-group input-group-sm me-3" style="width: 250px;">
+          <span class="input-group-text bg-light border-end-0">
+            <i class="bi bi-search text-muted"></i>
+          </span>
+          <input type="text" class="form-control border-start-0 bg-light" placeholder="Search VMs..." id="searchInput">
+        </div>
+        <div class="btn-group btn-group-sm">
+          <button class="btn btn-outline-secondary" onclick="toggleView('table')" id="tableViewBtn">
+            <i class="bi bi-table"></i>
+          </button>
+          <button class="btn btn-outline-secondary" onclick="toggleView('grid')" id="gridViewBtn">
+            <i class="bi bi-grid-3x3"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="card-body p-0">
+    <div class="table-responsive" id="tableView">
+      <table id="vmsTable" class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="border-0 fw-semibold text-dark" width="50">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="selectAllHeader">
+              </div>
+            </th>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-tag me-2"></i>Name
+            </th>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-power me-2"></i>Status
+            </th>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-cpu me-2"></i>Resources
+            </th>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-laptop me-2"></i>Operating System
+            </th>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-hdd-stack me-2"></i>Hypervisor
+            </th>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-people me-2"></i>Owners
+            </th>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-tags me-2"></i>Tags
+            </th>
+            <th class="border-0 fw-semibold text-dark text-center">
+              <i class="bi bi-gear me-2"></i>Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for vm in vms %}
+          <tr data-vm-id="{{ vm.id }}" class="border-bottom">
+            <td class="py-3">
+              <div class="form-check">
+                <input class="form-check-input vm-checkbox" type="checkbox" value="{{ vm.id }}">
+              </div>
+            </td>
+            <td class="py-3">
+              <div class="d-flex align-items-center">
+                <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; background: var(--primary-gradient) !important;">
+                  <i class="bi bi-display text-white"></i>
+                </div>
+                <div>
+                  <div class="fw-semibold">{{ vm.name }}</div>
+                  <small class="text-muted">Virtual Machine</small>
+                </div>
+              </div>
+            </td>
+            <td class="py-3">
+              {% if vm.power_state == 'poweredOn' %}
+                <span class="badge rounded-pill px-3 py-2" style="background: var(--success-gradient); color: white;">
+                  <i class="bi bi-play-fill me-1"></i>Running
+                </span>
+              {% elif vm.power_state == 'poweredOff' %}
+                <span class="badge bg-secondary rounded-pill px-3 py-2">
+                  <i class="bi bi-stop-fill me-1"></i>Stopped
+                </span>
+              {% else %}
+                <span class="badge rounded-pill px-3 py-2" style="background: var(--warning-gradient); color: white;">
+                  <i class="bi bi-pause-fill me-1"></i>{{ vm.power_state|title }}
+                </span>
+              {% endif %}
+            </td>
+            <td class="py-3">
+              <div class="text-dark">
+                <div><i class="bi bi-cpu me-1"></i>{{ vm.cpu }} vCPU</div>
+                <small class="text-muted"><i class="bi bi-memory me-1"></i>{{ (vm.memory_mb / 1024)|round(1) }}GB RAM</small>
+              </div>
+            </td>
+            <td class="py-3">
+              <div class="d-flex align-items-center">
+                {% if 'windows' in vm.guest_os.lower() %}
+                  <i class="bi bi-windows text-primary me-2 fs-5"></i>
+                {% elif 'linux' in vm.guest_os.lower() %}
+                  <i class="bi bi-terminal text-warning me-2 fs-5"></i>
+                {% else %}
+                  <i class="bi bi-laptop me-2 fs-5"></i>
+                {% endif %}
+                <div>
+                  <div class="text-dark">{{ vm.guest_os }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="py-3">
+              <span class="badge bg-light text-dark px-3 py-2">{{ vm.hypervisor }}</span>
+            </td>
+            <td class="py-3">
+              <div class="owners-list">
+                {% if vm.owners %}
+                  <span class="badge rounded-pill px-3 py-2" style="background: var(--info-gradient); color: white;">{{ vm.owners|length }}</span>
+                  <small class="text-muted">owners</small>
+                {% else %}
+                  <span class="text-muted">No owners</span>
+                {% endif %}
+              </div>
+            </td>
+            <td class="py-3">
+              <div class="tags-list">
+                {% if vm.tags %}
+                  <span class="badge bg-secondary rounded-pill px-3 py-2">{{ vm.tags|length }}</span>
+                  <small class="text-muted">tags</small>
+                {% else %}
+                  <span class="text-muted">No tags</span>
+                {% endif %}
+              </div>
+            </td>
+            <td class="py-3 text-center">
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-primary" 
+                        data-action="view" 
+                        data-vm-id="{{ vm.id }}"
+                        data-vm-name="{{ vm.name }}"
+                        title="View Details">
+                  <i class="bi bi-eye"></i>
+                </button>
+                <button class="btn btn-outline-info" 
+                        data-action="owners" 
+                        data-vm-id="{{ vm.id }}"
+                        title="Manage Owners">
+                  <i class="bi bi-people"></i>
+                </button>
+                <button class="btn btn-outline-success" 
+                        data-action="tags" 
+                        data-vm-id="{{ vm.id }}"
+                        title="Manage Tags">
+                  <i class="bi bi-tags"></i>
+                </button>
+                <div class="dropdown">
+                  <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" title="More Actions">
+                    <i class="bi bi-three-dots"></i>
+                  </button>
+                  <ul class="dropdown-menu">
+                    {% if vm.power_state == 'poweredOff' %}
+                    <li><a class="dropdown-item text-success" href="#" data-action="power-on" data-vm-id="{{ vm.id }}">
+                      <i class="bi bi-play me-2"></i>Power On
+                    </a></li>
+                    {% else %}
+                    <li><a class="dropdown-item text-warning" href="#" data-action="power-off" data-vm-id="{{ vm.id }}">
+                      <i class="bi bi-stop me-2"></i>Power Off
+                    </a></li>
+                    {% endif %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-danger" href="#" data-action="delete" data-vm-id="{{ vm.id }}">
+                      <i class="bi bi-trash me-2"></i>Delete
+                    </a></li>
+                  </ul>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Enhanced Grid View -->
+    <div id="gridView" class="p-4" style="display: none;">
+      <div class="row g-4">
+        {% for vm in vms %}
+        <div class="col-xl-3 col-lg-4 col-md-6 vm-card" data-vm-id="{{ vm.id }}">
+          <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body p-4">
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <div class="form-check">
+                  <input class="form-check-input vm-checkbox" type="checkbox" value="{{ vm.id }}">
+                </div>
+                {% if vm.power_state == 'poweredOn' %}
+                  <span class="badge rounded-pill px-3 py-2" style="background: var(--success-gradient); color: white;">Running</span>
+                {% else %}
+                  <span class="badge bg-secondary rounded-pill px-3 py-2">Stopped</span>
+                {% endif %}
+              </div>
+              
+              <div class="text-center mb-3">
+                <div class="bg-primary rounded-3 d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px; background: var(--primary-gradient) !important;">
+                  <i class="bi bi-display fs-3 text-white"></i>
+                </div>
+                <h6 class="fw-semibold mb-1">{{ vm.name }}</h6>
+                <small class="text-muted">{{ vm.guest_os }}</small>
+              </div>
+              
+              <div class="vm-specs mb-4 bg-light rounded-3 p-3">
+                <div class="d-flex justify-content-between mb-2">
+                  <small class="text-muted fw-medium">CPU:</small>
+                  <small class="fw-semibold text-dark">{{ vm.cpu }} vCPU</small>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                  <small class="text-muted fw-medium">Memory:</small>
+                  <small class="fw-semibold text-dark">{{ (vm.memory_mb / 1024)|round(1) }}GB</small>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <small class="text-muted fw-medium">Host:</small>
+                  <small class="fw-semibold text-dark">{{ vm.hypervisor }}</small>
+                </div>
+              </div>
+              
+              <div class="d-flex gap-2">
+                <button class="btn btn-primary flex-fill" data-action="view" data-vm-id="{{ vm.id }}">
+                  <i class="bi bi-eye me-1"></i>Details
+                </button>
+                <div class="dropdown">
+                  <button class="btn btn-outline-secondary" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-three-dots"></i>
+                  </button>
+                  <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" data-action="owners" data-vm-id="{{ vm.id }}">
+                      <i class="bi bi-people me-2"></i>Owners
+                    </a></li>
+                    <li><a class="dropdown-item" href="#" data-action="tags" data-vm-id="{{ vm.id }}">
+                      <i class="bi bi-tags me-2"></i>Tags
+                    </a></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Enhanced VM Detail Modal -->
+<div class="modal fade" id="vmDetailModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-bottom-0 pb-0">
+        <div class="d-flex align-items-center">
+          <div class="bg-primary rounded-3 p-2 me-3" style="background: var(--primary-gradient) !important;">
+            <i class="bi bi-display text-white"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-bold">VM Details</h5>
+            <small class="text-muted" id="vmDetailSubtitle">Loading...</small>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <div id="vmDetailBody">
+          <div class="d-flex justify-content-center align-items-center py-5">
+            <div class="loading"></div>
+            <span class="ms-2">Loading VM details...</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-top-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary btn-lg" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg me-2"></i>Close
+        </button>
+        <button type="button" class="btn btn-primary btn-lg" id="editVMBtn">
+          <i class="bi bi-pencil me-2"></i>Edit VM
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Enhanced VM Owners Modal -->
+<div class="modal fade" id="vmOwnersModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-bottom-0 pb-0">
+        <div class="d-flex align-items-center">
+          <div class="bg-info rounded-3 p-2 me-3" style="background: var(--info-gradient) !important;">
+            <i class="bi bi-people text-white"></i>
+          </div>
+          <h5 class="modal-title fw-bold">Assign Owners</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <form id="assignOwnersForm">
+          <input type="hidden" name="vm_id" id="ownersVmId" />
+          <div class="mb-4">
+            <label class="form-label fw-semibold text-dark mb-2">
+              <i class="bi bi-tag me-2 text-primary"></i>VM Name
+            </label>
+            <input type="text" class="form-control form-control-lg border-2" id="ownersVmName" readonly>
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold text-dark mb-2">
+              <i class="bi bi-envelope me-2 text-primary"></i>Owner Email Addresses
+            </label>
+            <textarea class="form-control form-control-lg border-2" id="ownersInput" rows="4" 
+                      placeholder="Enter email addresses separated by commas or new lines&#10;user1@example.com&#10;user2@example.com"></textarea>
+            <div class="form-text">
+              <i class="bi bi-info-circle me-1"></i>You can enter multiple email addresses separated by commas or new lines
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-dark mb-2">Current Owners</label>
+            <div id="currentOwners" class="border rounded-3 p-3 bg-light">
+              <small class="text-muted">Loading...</small>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-top-0 pt-0">
+        <button class="btn btn-outline-secondary btn-lg" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg me-2"></i>Cancel
+        </button>
+        <button class="btn btn-primary btn-lg" id="saveOwnersBtn">
+          <i class="bi bi-check-lg me-2"></i>Save Owners
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Enhanced VM Tags Modal -->
+<div class="modal fade" id="vmTagsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-bottom-0 pb-0">
+        <div class="d-flex align-items-center">
+          <div class="bg-success rounded-3 p-2 me-3" style="background: var(--success-gradient) !important;">
+            <i class="bi bi-tags text-white"></i>
+          </div>
+          <h5 class="modal-title fw-bold">Assign Tags</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <form id="assignTagsForm">
+          <input type="hidden" name="vm_id" id="tagsVmId" />
+          <div class="mb-4">
+            <label class="form-label fw-semibold text-dark mb-2">
+              <i class="bi bi-tag me-2 text-primary"></i>VM Name
+            </label>
+            <input type="text" class="form-control form-control-lg border-2" id="tagsVmName" readonly>
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold text-dark mb-2">
+              <i class="bi bi-tags me-2 text-primary"></i>Tags
+            </label>
+            <input type="text" class="form-control form-control-lg border-2" id="tagsInput" 
+                   placeholder="web, database, production, critical">
+            <div class="form-text">
+              <i class="bi bi-info-circle me-1"></i>Enter tags separated by commas (e.g., web, db, prod)
+            </div>
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold text-dark mb-2">Suggested Tags</label>
+            <div id="suggestedTags" class="d-flex flex-wrap gap-2">
+              <button type="button" class="btn btn-outline-primary btn-sm tag-suggestion" data-tag="production">production</button>
+              <button type="button" class="btn btn-outline-primary btn-sm tag-suggestion" data-tag="staging">staging</button>
+              <button type="button" class="btn btn-outline-primary btn-sm tag-suggestion" data-tag="development">development</button>
+              <button type="button" class="btn btn-outline-primary btn-sm tag-suggestion" data-tag="web">web</button>
+              <button type="button" class="btn btn-outline-primary btn-sm tag-suggestion" data-tag="database">database</button>
+              <button type="button" class="btn btn-outline-primary btn-sm tag-suggestion" data-tag="backup">backup</button>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold text-dark mb-2">Current Tags</label>
+            <div id="currentTags" class="border rounded-3 p-3 bg-light">
+              <small class="text-muted">Loading...</small>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-top-0 pt-0">
+        <button class="btn btn-outline-secondary btn-lg" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg me-2"></i>Cancel
+        </button>
+        <button class="btn btn-primary btn-lg" id="saveTagsBtn">
+          <i class="bi bi-check-lg me-2"></i>Save Tags
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(function(){
+  // Initialize DataTable with enhanced styling
+  const table = $('#vmsTable').DataTable({ 
+    pageLength: 25,
+    dom: 'lrtip', // Hide default search box
+    responsive: true,
+    order: [[1, 'asc']], // Sort by VM name by default
+    columnDefs: [
+      { orderable: false, targets: [0, 8] } // Disable sorting on checkbox and Actions columns
+    ],
+    language: {
+      emptyTable: '<div class="text-center py-4"><i class="bi bi-inbox display-4 text-muted"></i><br><span class="text-muted">No virtual machines found</span></div>',
+      zeroRecords: '<div class="text-center py-4"><i class="bi bi-search display-4 text-muted"></i><br><span class="text-muted">No matching virtual machines found</span></div>'
+    }
+  });
+  
+  // Custom search functionality
+  $('#searchInput').on('keyup', function() {
+    table.search(this.value).draw();
+  });
+
+  // Advanced filtering functionality
+  $('#filterName').on('keyup', function() {
+    table.column(1).search(this.value).draw();
+  });
+
+  $('#filterPower').on('change', function() {
+    const value = this.value;
+    if (value === '') {
+      table.column(2).search('').draw();
+    } else {
+      const searchTerm = value === 'poweredOn' ? 'Running' : 
+                        value === 'poweredOff' ? 'Stopped' : 
+                        value;
+      table.column(2).search(searchTerm).draw();
+    }
+  });
+
+  $('#filterHypervisor').on('keyup', function() {
+    table.column(5).search(this.value).draw();
+  });
+
+  $('#filterOS').on('change', function() {
+    table.column(4).search(this.value).draw();
+  });
+
+  $('#filterMemory').on('change', function() {
+    const value = this.value;
+    if (value === '') {
+      table.column(3).search('').draw();
+    } else {
+      // This would need custom filtering logic based on memory ranges
+      // For now, just search the column
+      table.column(3).search(value).draw();
+    }
+  });
+
+  $('#clearFilters').on('click', function() {
+    $('#filterName, #filterHypervisor').val('');
+    $('#filterPower, #filterOS, #filterMemory').val('');
+    table.search('').columns().search('').draw();
+  });
+
+  // Select all functionality
+  $('#selectAll, #selectAllHeader').on('change', function() {
+    const isChecked = this.checked;
+    $('.vm-checkbox').prop('checked', isChecked);
+    updateSelectedCount();
+    // Sync both checkboxes
+    $('#selectAll, #selectAllHeader').prop('checked', isChecked);
+  });
+
+  // Individual checkbox handling
+  $(document).on('change', '.vm-checkbox', function() {
+    updateSelectedCount();
+    const totalCheckboxes = $('.vm-checkbox').length;
+    const checkedCheckboxes = $('.vm-checkbox:checked').length;
+    const selectAllChecked = totalCheckboxes === checkedCheckboxes;
+    $('#selectAll, #selectAllHeader').prop('checked', selectAllChecked);
+  });
+
+  function updateSelectedCount() {
+    const count = $('.vm-checkbox:checked').length;
+    $('#selectedVMs').text(count);
+  }
+
+  // View toggle functionality
+  window.toggleView = function(view) {
+    if (view === 'table') {
+      $('#tableView').show();
+      $('#gridView').hide();
+      $('#tableViewBtn').addClass('active');
+      $('#gridViewBtn').removeClass('active');
+    } else {
+      $('#tableView').hide();
+      $('#gridView').show();
+      $('#tableViewBtn').removeClass('active');
+      $('#gridViewBtn').addClass('active');
+    }
+  };
+
+  // Action button handlers
+  $(document).on('click', '[data-action]', function(e) {
+    e.preventDefault();
+    const action = $(this).data('action');
+    const vmId = $(this).data('vm-id');
+    const vmName = $(this).data('vm-name');
+
+    switch(action) {
+      case 'view':
+        showVMDetails(vmId, vmName);
+        break;
+      case 'owners':
+        showOwnersModal(vmId, vmName);
+        break;
+      case 'tags':
+        showTagsModal(vmId, vmName);
+        break;
+      case 'power-on':
+        powerAction(vmId, vmName, 'on');
+        break;
+      case 'power-off':
+        powerAction(vmId, vmName, 'off');
+        break;
+      case 'delete':
+        deleteVM(vmId, vmName);
+        break;
+    }
+  });
+
+  // Tag suggestion buttons
+  $(document).on('click', '.tag-suggestion', function() {
+    const tag = $(this).data('tag');
+    const currentTags = $('#tagsInput').val().trim();
+    const tags = currentTags ? currentTags.split(',').map(t => t.trim()) : [];
+    
+    if (!tags.includes(tag)) {
+      tags.push(tag);
+      $('#tagsInput').val(tags.join(', '));
+    }
+  });
+
+  // Form submissions with loading states
+  $('#assignOwnersForm').on('submit', function(e) {
+    e.preventDefault();
+    const submitBtn = $('#saveOwnersBtn');
+    submitBtn.html('<span class="loading me-2"></span>Saving...').prop('disabled', true);
+    // Add your save logic here
+  });
+
+  $('#assignTagsForm').on('submit', function(e) {
+    e.preventDefault();
+    const submitBtn = $('#saveTagsBtn');
+    submitBtn.html('<span class="loading me-2"></span>Saving...').prop('disabled', true);
+    // Add your save logic here
+  });
+
+  // Reset forms when modals are closed
+  $('.modal').on('hidden.bs.modal', function() {
+    $(this).find('form')[0]?.reset();
+    $(this).find('.is-invalid').removeClass('is-invalid');
+    $(this).find('button[type="submit"], #saveOwnersBtn, #saveTagsBtn').prop('disabled', false);
+    
+    // Reset button text
+    $('#saveOwnersBtn').html('<i class="bi bi-check-lg me-2"></i>Save Owners');
+    $('#saveTagsBtn').html('<i class="bi bi-check-lg me-2"></i>Save Tags');
+  });
+
+  // Toast notification function
+  function showToast(type, message) {
+    const toastHtml = `
+      <div class="toast align-items-center text-bg-${type === 'success' ? 'success' : type === 'info' ? 'info' : 'danger'} border-0" role="alert">
+        <div class="d-flex">
+          <div class="toast-body">
+            <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'info' ? 'info-circle' : 'exclamation-triangle'} me-2"></i>
+            ${message}
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+      </div>
+    `;
+    
+    let toastContainer = $('.toast-container');
+    if (toastContainer.length === 0) {
+      $('body').append('<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080;"></div>');
+      toastContainer = $('.toast-container');
+    }
+    
+    toastContainer.append(toastHtml);
+    const toast = new bootstrap.Toast($('.toast').last()[0], { autohide: true, delay: 5000 });
+    toast.show();
+  }
+
+  // Make functions available globally
+  window.showToast = showToast;
+  
+  window.showVMDetails = function(vmId, vmName) {
+    $('#vmDetailSubtitle').text(`VM ID: ${vmId}`);
+    $('#vmDetailModal').modal('show');
+    // Add your VM details loading logic here
+  };
+
+  window.showOwnersModal = function(vmId, vmName) {
+    $('#ownersVmId').val(vmId);
+    $('#ownersVmName').val(vmName);
+    $('#vmOwnersModal').modal('show');
+    // Add your owners loading logic here
+  };
+
+  window.showTagsModal = function(vmId, vmName) {
+    $('#tagsVmId').val(vmId);
+    $('#tagsVmName').val(vmName);
+    $('#vmTagsModal').modal('show');
+    // Add your tags loading logic here
+  };
+
+  window.powerAction = function(vmId, vmName, action) {
+    const actionText = action === 'on' ? 'Power On' : 'Power Off';
+    if (confirm(`Are you sure you want to ${actionText.toLowerCase()} "${vmName}"?`)) {
+      showToast('info', `${actionText === 'Power On' ? 'Starting' : 'Stopping'} ${vmName}...`);
+      // Add your power action logic here
+    }
+  };
+
+  window.deleteVM = function(vmId, vmName) {
+    if (confirm(`Are you sure you want to delete "${vmName}"? This action cannot be undone.`)) {
+      showToast('info', `Deleting ${vmName}...`);
+      // Add your delete logic here
+    }
+  };
+
+  window.bulkAction = function(action) {
+    const selectedVMs = $('.vm-checkbox:checked');
+    if (selectedVMs.length === 0) {
+      showToast('warning', 'Please select at least one VM to perform bulk actions');
+      return;
+    }
+
+    const vmCount = selectedVMs.length;
+    const actionMap = {
+      'power-on': 'Power On',
+      'power-off': 'Power Off',
+      'assign-owners': 'Assign Owners to',
+      'assign-tags': 'Assign Tags to'
+    };
+
+    const actionText = actionMap[action] || action;
+    if (confirm(`Are you sure you want to ${actionText.toLowerCase()} ${vmCount} selected VM(s)?`)) {
+      showToast('info', `${actionText} ${vmCount} VM(s)...`);
+      // Add your bulk action logic here
+    }
+  };
+
+  window.refreshVMs = function() {
+    showToast('info', 'Refreshing VM list...');
+    setTimeout(() => {
+      location.reload();
+    }, 1000);
+  };
+});
+</script>
+{% endblock %}

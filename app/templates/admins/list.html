@@ -1,0 +1,381 @@
+{% extends 'base.html' %}
+{% block content %}
+<!-- Enhanced Header Section -->
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div class="d-flex align-items-center">
+    <div class="me-3">
+      <div class="bg-primary rounded-3 p-3 d-flex align-items-center justify-content-center" style="background: var(--primary-gradient) !important; width: 48px; height: 48px;">
+        <i class="bi bi-shield-check text-white fs-5"></i>
+      </div>
+    </div>
+    <div>
+      <h2 class="mb-1 fw-bold">Admin Management</h2>
+      <p class="text-muted mb-0">Manage system administrators and their permissions</p>
+    </div>
+  </div>
+  <button class="btn btn-primary btn-lg" id="addAdminBtn">
+    <i class="bi bi-plus-lg me-2"></i>Add Admin
+  </button>
+</div>
+
+<!-- Enhanced Stats Cards -->
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-info rounded-3 p-2" style="background: var(--info-gradient) !important;">
+              <i class="bi bi-people text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3">
+            <div class="fw-bold fs-5" id="totalAdmins">{{ admins|length }}</div>
+            <div class="text-muted small">Total Admins</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-success rounded-3 p-2" style="background: var(--success-gradient) !important;">
+              <i class="bi bi-shield-check text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3">
+            <div class="fw-bold fs-5" id="superAdmins">{{ admins|selectattr("role", "equalto", "superadmin")|list|length }}</div>
+            <div class="text-muted small">Super Admins</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-warning rounded-3 p-2" style="background: var(--warning-gradient) !important;">
+              <i class="bi bi-pencil text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3">
+            <div class="fw-bold fs-5" id="editors">{{ admins|selectattr("role", "equalto", "editor")|list|length }}</div>
+            <div class="text-muted small">Editors</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-secondary rounded-3 p-2">
+              <i class="bi bi-eye text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3">
+            <div class="fw-bold fs-5" id="viewers">{{ admins|selectattr("role", "equalto", "viewer")|list|length }}</div>
+            <div class="text-muted small">Viewers</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Enhanced Admins Table -->
+<div class="card border-0">
+  <div class="card-header bg-white border-bottom-0 py-3">
+    <div class="d-flex align-items-center justify-content-between">
+      <h5 class="mb-0 fw-semibold">
+        <i class="bi bi-table me-2 text-primary"></i>
+        Administrator List
+      </h5>
+      <div class="d-flex align-items-center">
+        <div class="input-group input-group-sm" style="width: 250px;">
+          <span class="input-group-text bg-light border-end-0">
+            <i class="bi bi-search text-muted"></i>
+          </span>
+          <input type="text" class="form-control border-start-0 bg-light" placeholder="Search admins..." id="searchInput">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table id="adminsTable" class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-person me-2"></i>Username
+            </th>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-envelope me-2"></i>Email
+            </th>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-shield me-2"></i>Role
+            </th>
+            <th class="border-0 fw-semibold text-dark text-center">
+              <i class="bi bi-gear me-2"></i>Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in admins %}
+          <tr data-id="{{ a.id }}" class="border-bottom">
+            <td class="py-3">
+              <div class="d-flex align-items-center">
+                <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; background: var(--primary-gradient) !important;">
+                  <i class="bi bi-person text-white"></i>
+                </div>
+                <div>
+                  <div class="fw-semibold">{{ a.username }}</div>
+                  <small class="text-muted">Admin User</small>
+                </div>
+              </div>
+            </td>
+            <td class="py-3">
+              <div class="text-dark">{{ a.email }}</div>
+            </td>
+            <td class="py-3">
+              {% if a.role == 'superadmin' %}
+                <span class="badge rounded-pill px-3 py-2" style="background: var(--success-gradient); color: white;">
+                  <i class="bi bi-shield-fill-check me-1"></i>Super Admin
+                </span>
+              {% elif a.role == 'editor' %}
+                <span class="badge rounded-pill px-3 py-2" style="background: var(--warning-gradient); color: white;">
+                  <i class="bi bi-pencil-fill me-1"></i>Editor
+                </span>
+              {% else %}
+                <span class="badge bg-secondary rounded-pill px-3 py-2">
+                  <i class="bi bi-eye-fill me-1"></i>Viewer
+                </span>
+              {% endif %}
+            </td>
+            <td class="py-3 text-center">
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-primary" data-action="edit" title="Edit Admin">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-outline-danger" data-action="delete" title="Delete Admin">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Enhanced Modal -->
+<div class="modal fade" id="adminModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-bottom-0 pb-0">
+        <div class="d-flex align-items-center">
+          <div class="bg-primary rounded-3 p-2 me-3" style="background: var(--primary-gradient) !important;">
+            <i class="bi bi-shield-plus text-white"></i>
+          </div>
+          <h5 class="modal-title fw-bold" id="adminModalTitle">Add Admin</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <form id="adminForm">
+          <input type="hidden" id="adminId" />
+          
+          <div class="mb-4">
+            <label class="form-label fw-semibold text-dark mb-2">
+              <i class="bi bi-person me-2 text-primary"></i>Username
+            </label>
+            <input class="form-control form-control-lg border-2" id="adminUsername" required placeholder="Enter username" />
+          </div>
+          
+          <div class="mb-4">
+            <label class="form-label fw-semibold text-dark mb-2">
+              <i class="bi bi-envelope me-2 text-primary"></i>Email Address
+            </label>
+            <input type="email" class="form-control form-control-lg border-2" id="adminEmail" required placeholder="Enter email address" />
+          </div>
+          
+          <div class="mb-4">
+            <label class="form-label fw-semibold text-dark mb-2">
+              <i class="bi bi-key me-2 text-primary"></i>Password
+            </label>
+            <input type="password" class="form-control form-control-lg border-2" id="adminPassword" placeholder="Enter password" />
+            <div class="form-text">
+              <i class="bi bi-info-circle me-1"></i>Leave blank when editing to keep existing password
+            </div>
+          </div>
+          
+          <div class="mb-4">
+            <label class="form-label fw-semibold text-dark mb-2">
+              <i class="bi bi-shield me-2 text-primary"></i>Role
+            </label>
+            <select class="form-select form-select-lg border-2" id="adminRole">
+              <option value="viewer">👁️ Viewer - Read-only access</option>
+              <option value="editor">✏️ Editor - Can modify data</option>
+              <option value="superadmin">🛡️ Super Admin - Full access</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-top-0 pt-0">
+        <button class="btn btn-outline-secondary btn-lg" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg me-2"></i>Cancel
+        </button>
+        <button class="btn btn-primary btn-lg" id="saveAdminBtn">
+          <i class="bi bi-check-lg me-2"></i>Save Admin
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  $(function(){
+    // Initialize DataTable with enhanced styling
+    const table = $('#adminsTable').DataTable({ 
+      pageLength: 25,
+      dom: 'lrtip', // Hide default search box
+      language: {
+        emptyTable: '<div class="text-center py-4"><i class="bi bi-inbox display-4 text-muted"></i><br><span class="text-muted">No administrators found</span></div>',
+        zeroRecords: '<div class="text-center py-4"><i class="bi bi-search display-4 text-muted"></i><br><span class="text-muted">No matching administrators found</span></div>'
+      }
+    });
+    
+    // Custom search functionality
+    $('#searchInput').on('keyup', function() {
+      table.search(this.value).draw();
+    });
+    
+    const modal = new bootstrap.Modal(document.getElementById('adminModal'));
+
+    // Add Admin Button
+    $('#addAdminBtn').on('click', function(){
+      $('#adminModalTitle').text('Add Admin');
+      $('#adminModal .modal-header .bg-primary i').removeClass('bi-shield-check').addClass('bi-shield-plus');
+      $('#adminId').val('');
+      $('#adminUsername, #adminEmail, #adminPassword').val('');
+      $('#adminRole').val('viewer');
+      modal.show();
+    });
+
+    // Edit Admin Button
+    $(document).on('click', '[data-action="edit"]', function(){
+      const tr = $(this).closest('tr');
+      const data = table.row(tr).data();
+      $('#adminModalTitle').text('Edit Admin');
+      $('#adminModal .modal-header .bg-primary i').removeClass('bi-shield-plus').addClass('bi-shield-check');
+      $('#adminId').val(tr.data('id'));
+      $('#adminUsername').val(data[0]);
+      $('#adminEmail').val(data[1]);
+      $('#adminRole').val(data[2]);
+      $('#adminPassword').val('');
+      modal.show();
+    });
+
+    // Save Admin
+    $('#saveAdminBtn').on('click', async function(){
+      const btn = $(this);
+      const originalHtml = btn.html();
+      btn.html('<span class="loading me-2"></span>Saving...').prop('disabled', true);
+      
+      const id = $('#adminId').val();
+      const payload = {
+        username: $('#adminUsername').val().trim(),
+        email: $('#adminEmail').val().trim(),
+        role: $('#adminRole').val(),
+        password: $('#adminPassword').val().trim()
+      };
+      
+      if (!payload.username || !payload.email || (!id && !payload.password)) { 
+        showToast('error', 'Please fill in all required fields');
+        btn.html(originalHtml).prop('disabled', false);
+        return; 
+      }
+      
+      if (id && !payload.password) delete payload.password;
+      
+      try {
+        const response = await fetch(id ? `/admins/api/${id}` : '/admins/api', { 
+          method: id ? 'PUT' : 'POST', 
+          headers: {'Content-Type':'application/json'}, 
+          body: JSON.stringify(payload) 
+        });
+        
+        if (response.ok) {
+          showToast('success', `Admin ${id ? 'updated' : 'created'} successfully`);
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          throw new Error('Server error');
+        }
+      } catch (e) { 
+        showToast('error', 'Failed to save admin. Please try again.');
+        btn.html(originalHtml).prop('disabled', false);
+      }
+    });
+
+    // Delete Admin
+    $(document).on('click', '[data-action="delete"]', async function(){
+      if (!confirm('Are you sure you want to delete this administrator?\n\nThis action cannot be undone.')) return;
+      
+      const btn = $(this);
+      const originalHtml = btn.html();
+      btn.html('<span class="loading"></span>').prop('disabled', true);
+      
+      const tr = $(this).closest('tr');
+      const id = tr.data('id');
+      
+      try { 
+        const response = await fetch(`/admins/api/${id}`, { method: 'DELETE' });
+        if (response.ok) {
+          showToast('success', 'Admin deleted successfully');
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          throw new Error('Server error');
+        }
+      } catch(e){ 
+        showToast('error', 'Failed to delete admin. Please try again.');
+        btn.html(originalHtml).prop('disabled', false);
+      }
+    });
+
+    // Toast notification function
+    function showToast(type, message) {
+      const toastHtml = `
+        <div class="toast align-items-center text-bg-${type === 'success' ? 'success' : 'danger'} border-0" role="alert">
+          <div class="d-flex">
+            <div class="toast-body">
+              <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+              ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+          </div>
+        </div>
+      `;
+      
+      const toastContainer = $('.toast-container');
+      if (toastContainer.length === 0) {
+        $('body').append('<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080;"></div>');
+      }
+      
+      $('.toast-container').append(toastHtml);
+      const toast = new bootstrap.Toast($('.toast').last()[0], { autohide: true, delay: 5000 });
+      toast.show();
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,793 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Nimbus VM Inventory{% endblock %}
+
+{% block content %}
+<!-- Enhanced Header Section -->
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div class="d-flex align-items-center">
+    <div class="me-3">
+      <div class="bg-primary rounded-3 p-3 d-flex align-items-center justify-content-center" style="background: var(--primary-gradient) !important; width: 48px; height: 48px;">
+        <i class="bi bi-speedometer2 text-white fs-5"></i>
+      </div>
+    </div>
+    <div>
+      <h2 class="mb-1 fw-bold">Dashboard</h2>
+      <p class="text-muted mb-0">Overview of your virtual machine infrastructure</p>
+    </div>
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-outline-primary btn-lg" onclick="refreshData()">
+      <i class="bi bi-arrow-clockwise me-2"></i>Refresh
+    </button>
+    <div class="dropdown">
+      <button class="btn btn-outline-secondary btn-lg dropdown-toggle" type="button" data-bs-toggle="dropdown">
+        <i class="bi bi-download me-2"></i>Export
+      </button>
+      <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="/reports/summary"><i class="bi bi-file-earmark-text me-2"></i>Summary Report</a></li>
+        <li><a class="dropdown-item" href="/reports/detailed"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Detailed Report</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="/reports/custom"><i class="bi bi-gear me-2"></i>Custom Report</a></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Enhanced Statistics Cards -->
+<div class="row mb-5">
+  <div class="col-xl-3 col-md-6 mb-4">
+    <div class="card border-0 h-100 stats-card">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-primary rounded-3 p-2" style="background: var(--primary-gradient) !important;">
+              <i class="bi bi-hdd-network text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3 flex-grow-1">
+            <div class="fw-bold fs-5 counter" data-target="{{ total_vms }}">0</div>
+            <div class="text-muted small">Total VMs</div>
+          </div>
+        </div>
+        <div class="d-flex align-items-center mt-3">
+          <span class="badge rounded-pill px-3 py-2" style="background: var(--success-gradient); color: white;">
+            <i class="bi bi-arrow-up small me-1"></i>+5.2%
+          </span>
+          <small class="text-muted ms-2">vs last month</small>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-xl-3 col-md-6 mb-4">
+    <div class="card border-0 h-100 stats-card">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-success rounded-3 p-2" style="background: var(--success-gradient) !important;">
+              <i class="bi bi-toggle-on text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3 flex-grow-1">
+            <div class="fw-bold fs-5 counter" data-target="{{ powered_on }}">0</div>
+            <div class="text-muted small">Powered On</div>
+          </div>
+        </div>
+        <div class="d-flex align-items-center mt-3">
+          <div class="progress flex-grow-1 me-2" style="height: 6px;">
+            <div class="progress-bar" style="background: var(--success-gradient); width: {{ (powered_on / total_vms * 100) if total_vms > 0 else 0 }}%"></div>
+          </div>
+          <small class="text-muted">{{ "%.1f"|format((powered_on / total_vms * 100) if total_vms > 0 else 0) }}%</small>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-xl-3 col-md-6 mb-4">
+    <div class="card border-0 h-100 stats-card">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-secondary rounded-3 p-2">
+              <i class="bi bi-toggle-off text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3 flex-grow-1">
+            <div class="fw-bold fs-5 counter" data-target="{{ powered_off }}">0</div>
+            <div class="text-muted small">Powered Off</div>
+          </div>
+        </div>
+        <div class="d-flex align-items-center mt-3">
+          <div class="progress flex-grow-1 me-2" style="height: 6px;">
+            <div class="progress-bar bg-secondary" style="width: {{ (powered_off / total_vms * 100) if total_vms > 0 else 0 }}%"></div>
+          </div>
+          <small class="text-muted">{{ "%.1f"|format((powered_off / total_vms * 100) if total_vms > 0 else 0) }}%</small>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-xl-3 col-md-6 mb-4">
+    <div class="card border-0 h-100 stats-card">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-warning rounded-3 p-2" style="background: var(--warning-gradient) !important;">
+              <i class="bi bi-exclamation-triangle text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3 flex-grow-1">
+            <div class="fw-bold fs-5">3</div>
+            <div class="text-muted small">Active Alerts</div>
+          </div>
+        </div>
+        <div class="d-flex align-items-center mt-3">
+          <span class="badge rounded-pill px-3 py-2" style="background: var(--danger-gradient); color: white;">
+            <i class="bi bi-exclamation-circle small me-1"></i>Urgent
+          </span>
+          <small class="text-muted ms-2">Needs attention</small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Enhanced Quick Actions Card -->
+  <div class="col-lg-6">
+    <div class="card border-0 h-100">
+      <div class="card-header bg-white border-bottom-0 py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="mb-1 fw-semibold">
+              <i class="bi bi-lightning me-2 text-primary"></i>
+              Quick Actions
+            </h5>
+            <small class="text-muted">Frequently used management tasks</small>
+          </div>
+          <div class="dropdown">
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown">
+              <i class="bi bi-three-dots"></i>
+            </button>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Customize</a></li>
+              <li><a class="dropdown-item" href="#"><i class="bi bi-sliders me-2"></i>Settings</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-6">
+            <a href="/vms/" class="text-decoration-none">
+              <div class="quick-action-card p-4 rounded-3 text-center h-100">
+                <div class="bg-primary rounded-3 d-inline-flex align-items-center justify-content-center mb-3" style="width: 50px; height: 50px; background: var(--primary-gradient) !important;">
+                  <i class="bi bi-hdd-network fs-4 text-white"></i>
+                </div>
+                <h6 class="fw-semibold mb-1">View VMs</h6>
+                <small class="text-muted">Manage virtual machines</small>
+              </div>
+            </a>
+          </div>
+          <div class="col-6">
+            <a href="/vcenter/" class="text-decoration-none">
+              <div class="quick-action-card p-4 rounded-3 text-center h-100">
+                <div class="bg-success rounded-3 d-inline-flex align-items-center justify-content-center mb-3" style="width: 50px; height: 50px; background: var(--success-gradient) !important;">
+                  <i class="bi bi-server fs-4 text-white"></i>
+                </div>
+                <h6 class="fw-semibold mb-1">vCenter</h6>
+                <small class="text-muted">vCenter management</small>
+              </div>
+            </a>
+          </div>
+          <div class="col-6">
+            <a href="/owners/" class="text-decoration-none">
+              <div class="quick-action-card p-4 rounded-3 text-center h-100">
+                <div class="bg-info rounded-3 d-inline-flex align-items-center justify-content-center mb-3" style="width: 50px; height: 50px; background: var(--info-gradient) !important;">
+                  <i class="bi bi-people fs-4 text-white"></i>
+                </div>
+                <h6 class="fw-semibold mb-1">Owners</h6>
+                <small class="text-muted">Manage VM owners</small>
+              </div>
+            </a>
+          </div>
+          <div class="col-6">
+            <a href="/tags/" class="text-decoration-none">
+              <div class="quick-action-card p-4 rounded-3 text-center h-100">
+                <div class="bg-warning rounded-3 d-inline-flex align-items-center justify-content-center mb-3" style="width: 50px; height: 50px; background: var(--warning-gradient) !important;">
+                  <i class="bi bi-tags fs-4 text-white"></i>
+                </div>
+                <h6 class="fw-semibold mb-1">Tags</h6>
+                <small class="text-muted">Organize with tags</small>
+              </div>
+            </a>
+          </div>
+        </div>
+        <div class="mt-4">
+          <a href="/admins/" class="btn btn-primary w-100 btn-lg">
+            <i class="bi bi-shield-check me-2"></i>
+            Admin Management
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enhanced System Health Card -->
+  <div class="col-lg-6">
+    <div class="card border-0 h-100">
+      <div class="card-header bg-white border-bottom-0 py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="mb-1 fw-semibold">
+              <i class="bi bi-heart-pulse me-2 text-primary"></i>
+              System Health
+            </h5>
+            <small class="text-muted">Real-time infrastructure status</small>
+          </div>
+          <span class="badge rounded-pill px-3 py-2" style="background: var(--success-gradient); color: white;">
+            <i class="bi bi-check-circle me-1"></i>All Systems Operational
+          </span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="health-metrics">
+          <!-- CPU Usage -->
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex align-items-center">
+              <div class="bg-primary rounded-3 d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; background: var(--primary-gradient) !important;">
+                <i class="bi bi-cpu text-white"></i>
+              </div>
+              <div>
+                <h6 class="mb-1 fw-semibold">CPU Usage</h6>
+                <small class="text-muted">Average across all VMs</small>
+              </div>
+            </div>
+            <div class="text-end">
+              <div class="fw-bold fs-5 text-success mb-1">32%</div>
+              <div class="progress" style="width: 80px; height: 6px;">
+                <div class="progress-bar" style="background: var(--success-gradient); width: 32%"></div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Memory Usage -->
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex align-items-center">
+              <div class="bg-info rounded-3 d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; background: var(--info-gradient) !important;">
+                <i class="bi bi-memory text-white"></i>
+              </div>
+              <div>
+                <h6 class="mb-1 fw-semibold">Memory Usage</h6>
+                <small class="text-muted">RAM utilization</small>
+              </div>
+            </div>
+            <div class="text-end">
+              <div class="fw-bold fs-5 text-warning mb-1">68%</div>
+              <div class="progress" style="width: 80px; height: 6px;">
+                <div class="progress-bar" style="background: var(--warning-gradient); width: 68%"></div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Storage Usage -->
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex align-items-center">
+              <div class="bg-secondary rounded-3 d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                <i class="bi bi-hdd text-white"></i>
+              </div>
+              <div>
+                <h6 class="mb-1 fw-semibold">Storage Usage</h6>
+                <small class="text-muted">Disk space utilization</small>
+              </div>
+            </div>
+            <div class="text-end">
+              <div class="fw-bold fs-5 text-success mb-1">45%</div>
+              <div class="progress" style="width: 80px; height: 6px;">
+                <div class="progress-bar" style="background: var(--success-gradient); width: 45%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="border-top pt-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <small class="text-muted">
+              <i class="bi bi-clock me-1"></i>Last updated:
+            </small>
+            <small class="fw-semibold" id="lastUpdated">Just now</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Enhanced Recent Activity & Alerts -->
+<div class="row g-4 mt-2">
+  <div class="col-lg-8">
+    <div class="card border-0">
+      <div class="card-header bg-white border-bottom-0 py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="mb-1 fw-semibold">
+              <i class="bi bi-activity me-2 text-primary"></i>
+              Recent Activity
+            </h5>
+            <small class="text-muted">Latest changes and events</small>
+          </div>
+          <a href="/activity/" class="btn btn-outline-primary btn-lg">
+            <i class="bi bi-eye me-2"></i>View All
+          </a>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="activity-feed">
+          <div class="activity-item d-flex align-items-start">
+            <div class="bg-success rounded-3 d-flex align-items-center justify-content-center me-3" style="width: 36px; height: 36px; background: var(--success-gradient) !important;">
+              <i class="bi bi-check-circle text-white"></i>
+            </div>
+            <div class="flex-grow-1">
+              <div class="d-flex justify-content-between align-items-start mb-1">
+                <p class="mb-1 fw-medium">VM web-server-01 was powered on successfully</p>
+                <small class="text-muted">2 min ago</small>
+              </div>
+              <small class="text-muted">Virtual machine started without errors</small>
+            </div>
+          </div>
+          
+          <div class="activity-item d-flex align-items-start">
+            <div class="bg-info rounded-3 d-flex align-items-center justify-content-center me-3" style="width: 36px; height: 36px; background: var(--info-gradient) !important;">
+              <i class="bi bi-info-circle text-white"></i>
+            </div>
+            <div class="flex-grow-1">
+              <div class="d-flex justify-content-between align-items-start mb-1">
+                <p class="mb-1 fw-medium">New VM db-server-03 added to inventory</p>
+                <small class="text-muted">15 min ago</small>
+              </div>
+              <small class="text-muted">Discovered via vCenter synchronization</small>
+            </div>
+          </div>
+          
+          <div class="activity-item d-flex align-items-start">
+            <div class="bg-warning rounded-3 d-flex align-items-center justify-content-center me-3" style="width: 36px; height: 36px; background: var(--warning-gradient) !important;">
+              <i class="bi bi-exclamation-triangle text-white"></i>
+            </div>
+            <div class="flex-grow-1">
+              <div class="d-flex justify-content-between align-items-start mb-1">
+                <p class="mb-1 fw-medium">Memory alert on vm-prod-02 (85% usage)</p>
+                <small class="text-muted">1 hr ago</small>
+              </div>
+              <small class="text-muted">Threshold exceeded, consider scaling resources</small>
+            </div>
+          </div>
+          
+          <div class="activity-item d-flex align-items-start">
+            <div class="bg-secondary rounded-3 d-flex align-items-center justify-content-center me-3" style="width: 36px; height: 36px;">
+              <i class="bi bi-power text-white"></i>
+            </div>
+            <div class="flex-grow-1">
+              <div class="d-flex justify-content-between align-items-start mb-1">
+                <p class="mb-1 fw-medium">VM backup-server was powered off for maintenance</p>
+                <small class="text-muted">3 hr ago</small>
+              </div>
+              <small class="text-muted">Scheduled maintenance window</small>
+            </div>
+          </div>
+        </div>
+        
+        <div class="text-center mt-4 pt-3 border-top">
+          <small class="text-muted">
+            <i class="bi bi-arrow-clockwise me-1"></i>
+            Activity feed updates every 30 seconds
+          </small>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-lg-4">
+    <div class="card border-0">
+      <div class="card-header bg-white border-bottom-0 py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="mb-1 fw-semibold">
+              <i class="bi bi-bell me-2 text-primary"></i>
+              Active Alerts
+            </h5>
+            <small class="text-muted">Issues requiring attention</small>
+          </div>
+          <span class="badge rounded-pill px-3 py-2" style="background: var(--warning-gradient); color: white;">3</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="alert-list">
+          <div class="alert alert-warning border-0 py-3 px-3 mb-3" style="background: rgba(255, 193, 7, 0.1);">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-exclamation-triangle text-warning me-3"></i>
+              <div class="flex-grow-1">
+                <div class="fw-semibold">High Memory Usage</div>
+                <small class="text-muted">vm-prod-02 • 85% utilization</small>
+              </div>
+              <button class="btn btn-sm btn-outline-warning" onclick="dismissAlert(this)">
+                <i class="bi bi-x"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="alert alert-danger border-0 py-3 px-3 mb-3" style="background: rgba(220, 53, 69, 0.1);">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-exclamation-circle text-danger me-3"></i>
+              <div class="flex-grow-1">
+                <div class="fw-semibold">VM Unreachable</div>
+                <small class="text-muted">test-server-01 • Connection failed</small>
+              </div>
+              <button class="btn btn-sm btn-outline-danger" onclick="dismissAlert(this)">
+                <i class="bi bi-x"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="alert alert-info border-0 py-3 px-3 mb-3" style="background: rgba(13, 202, 240, 0.1);">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-info-circle text-info me-3"></i>
+              <div class="flex-grow-1">
+                <div class="fw-semibold">Backup Scheduled</div>
+                <small class="text-muted">Starting in 2 hours</small>
+              </div>
+              <button class="btn btn-sm btn-outline-info" onclick="dismissAlert(this)">
+                <i class="bi bi-x"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="text-center">
+          <a href="/alerts/" class="btn btn-outline-secondary btn-lg w-100">
+            <i class="bi bi-bell me-2"></i>Manage Alerts
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    --info-gradient: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    --danger-gradient: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%);
+  }
+
+  .stats-card {
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  }
+  
+  .stats-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--primary-gradient);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  .stats-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  }
+  
+  .stats-card:hover::before {
+    opacity: 1;
+  }
+  
+  .quick-action-card {
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+    background-color: #f8f9fa;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .quick-action-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    transition: left 0.5s;
+  }
+  
+  .quick-action-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    border-color: var(--bs-border-color);
+    background-color: white;
+  }
+  
+  .quick-action-card:hover::before {
+    left: 100%;
+  }
+  
+  .activity-item {
+    padding: 20px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    transition: background-color 0.2s ease;
+  }
+  
+  .activity-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  
+  .activity-item:hover {
+    background-color: rgba(0,0,0,0.02);
+    border-radius: 8px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  
+  .counter {
+    color: #2d3748;
+  }
+
+  .alert {
+    border-radius: 12px;
+    transition: all 0.3s ease;
+  }
+
+  .alert:hover {
+    transform: translateX(4px);
+  }
+
+  .progress {
+    border-radius: 6px;
+    background-color: rgba(0,0,0,0.1);
+  }
+
+  .progress-bar {
+    border-radius: 6px;
+  }
+
+  .card {
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+  }
+
+  .card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  }
+
+  .btn-lg {
+    padding: 12px 24px;
+    font-weight: 600;
+  }
+
+  .loading {
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+  // Enhanced counter animation
+  $('.counter').each(function() {
+    const $this = $(this);
+    const target = parseInt($this.attr('data-target'));
+    
+    $({ countNum: 0 }).animate({
+      countNum: target
+    }, {
+      duration: 2500,
+      easing: 'easeOutCubic',
+      step: function() {
+        $this.text(Math.floor(this.countNum));
+      },
+      complete: function() {
+        $this.text(target.toLocaleString());
+      }
+    });
+  });
+  
+  // Update timestamp with more realistic intervals
+  function updateTimestamp() {
+    const now = new Date();
+    $('#lastUpdated').text(now.toLocaleTimeString());
+    
+    setTimeout(() => {
+      $('#lastUpdated').text('1 minute ago');
+    }, 60000);
+  }
+  
+  updateTimestamp();
+  setInterval(updateTimestamp, 300000); // Update every 5 minutes
+  
+  // Enhanced refresh data function
+  window.refreshData = function() {
+    const btn = $('button:contains("Refresh")');
+    const originalHtml = btn.html();
+    
+    btn.html('<div class="loading me-2"></div>Refreshing...').prop('disabled', true);
+    
+    // Simulate API call
+    setTimeout(() => {
+      btn.html(originalHtml).prop('disabled', false);
+      
+      // Re-animate counters
+      $('.counter').each(function() {
+        const $this = $(this);
+        const target = parseInt($this.attr('data-target'));
+        $this.text('0');
+        
+        $({ countNum: 0 }).animate({
+          countNum: target
+        }, {
+          duration: 1500,
+          step: function() {
+            $this.text(Math.floor(this.countNum));
+          },
+          complete: function() {
+            $this.text(target.toLocaleString());
+          }
+        });
+      });
+      
+      updateTimestamp();
+      showToast('success', 'Dashboard data refreshed successfully');
+    }, 2000);
+  };
+
+  // Dismiss alert function
+  window.dismissAlert = function(button) {
+    const alert = $(button).closest('.alert');
+    alert.fadeOut(300, function() {
+      $(this).remove();
+      updateAlertCount();
+    });
+  };
+
+  // Update alert count
+  function updateAlertCount() {
+    const alertCount = $('.alert-list .alert').length;
+    $('.card-header .badge').text(alertCount);
+    
+    if (alertCount === 0) {
+      $('.alert-list').html(`
+        <div class="text-center py-4">
+          <i class="bi bi-check-circle display-4 text-success mb-3"></i>
+          <h6 class="text-muted">No active alerts</h6>
+          <small class="text-muted">All systems are running smoothly</small>
+        </div>
+      `);
+    }
+  }
+
+  // Toast notification function
+  function showToast(type, message) {
+    const toastHtml = `
+      <div class="toast align-items-center text-bg-${type === 'success' ? 'success' : type === 'info' ? 'info' : 'danger'} border-0" role="alert">
+        <div class="d-flex">
+          <div class="toast-body">
+            <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'info' ? 'info-circle' : 'exclamation-triangle'} me-2"></i>
+            ${message}
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+      </div>
+    `;
+    
+    let toastContainer = $('.toast-container');
+    if (toastContainer.length === 0) {
+      $('body').append('<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080;"></div>');
+      toastContainer = $('.toast-container');
+    }
+    
+    toastContainer.append(toastHtml);
+    const toast = new bootstrap.Toast($('.toast').last()[0], { autohide: true, delay: 5000 });
+    toast.show();
+  }
+
+  // Make showToast available globally
+  window.showToast = showToast;
+
+  // Simulate real-time updates
+  function simulateRealTimeUpdates() {
+    const activities = [
+      'VM web-server-02 powered on successfully',
+      'New VM database-01 discovered',
+      'Backup completed for vm-prod-01',
+      'Memory usage normalized on vm-test-03'
+    ];
+    
+    const icons = ['check-circle', 'info-circle', 'archive', 'cpu'];
+    const colors = ['success', 'info', 'secondary', 'primary'];
+    
+    setInterval(() => {
+      const randomIndex = Math.floor(Math.random() * activities.length);
+      const activity = activities[randomIndex];
+      const icon = icons[randomIndex];
+      const color = colors[randomIndex];
+      
+      const newActivity = `
+        <div class="activity-item d-flex align-items-start" style="display: none;">
+          <div class="bg-${color} rounded-3 d-flex align-items-center justify-content-center me-3" style="width: 36px; height: 36px; background: var(--${color}-gradient) !important;">
+            <i class="bi bi-${icon} text-white"></i>
+          </div>
+          <div class="flex-grow-1">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+              <p class="mb-1 fw-medium">${activity}</p>
+              <small class="text-muted">Just now</small>
+            </div>
+            <small class="text-muted">Real-time system update</small>
+          </div>
+        </div>
+      `;
+      
+      $('.activity-feed').prepend(newActivity);
+      $('.activity-item').first().slideDown(300);
+      
+      // Keep only the latest 4 activities
+      if ($('.activity-item').length > 4) {
+        $('.activity-item').last().slideUp(300, function() {
+          $(this).remove();
+        });
+      }
+    }, 30000); // Every 30 seconds
+  }
+
+  // Start real-time updates simulation
+  simulateRealTimeUpdates();
+
+  // Enhanced easing function
+  $.easing.easeOutCubic = function (x, t, b, c, d) {
+    return c*((t=t/d-1)*t*t + 1) + b;
+  };
+
+  // Auto-update system health metrics
+  function updateHealthMetrics() {
+    const metrics = [
+      { selector: '.health-metrics .text-success', min: 25, max: 40 },
+      { selector: '.health-metrics .text-warning', min: 60, max: 75 },
+      { selector: '.health-metrics .text-success:last', min: 40, max: 50 }
+    ];
+
+    metrics.forEach((metric, index) => {
+      const newValue = Math.floor(Math.random() * (metric.max - metric.min + 1)) + metric.min;
+      const element = $(metric.selector).eq(index);
+      const progressBar = element.siblings('.progress').find('.progress-bar');
+      
+      element.text(newValue + '%');
+      progressBar.css('width', newValue + '%');
+    });
+  }
+
+  // Update health metrics every 2 minutes
+  setInterval(updateHealthMetrics, 120000);
+});
+</script>
+{% endblock %}

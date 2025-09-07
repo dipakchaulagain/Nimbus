@@ -1,0 +1,17 @@
+__pycache__/
+.pytest_cache/
+.env
+.venv/
+venv/
+dist/
+build/
+*.pyc
+*.pyo
+*.log
+postgres_data/
+*.sqlite3
+instance/
+coverage.xml
+.coverage*
+migrations/versions/*.pyc
+

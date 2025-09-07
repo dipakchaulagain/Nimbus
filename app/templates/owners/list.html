@@ -1,0 +1,366 @@
+{% extends 'base.html' %}
+{% block content %}
+<!-- Enhanced Header Section -->
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div class="d-flex align-items-center">
+    <div class="me-3">
+      <div class="bg-primary rounded-3 p-3 d-flex align-items-center justify-content-center" style="background: var(--primary-gradient) !important; width: 48px; height: 48px;">
+        <i class="bi bi-people text-white fs-5"></i>
+      </div>
+    </div>
+    <div>
+      <h2 class="mb-1 fw-bold">Owner Management</h2>
+      <p class="text-muted mb-0">Manage system owners and departmental assignments</p>
+    </div>
+  </div>
+  <button class="btn btn-primary btn-lg" id="addOwnerBtn">
+    <i class="bi bi-plus-lg me-2"></i>Add Owner
+  </button>
+</div>
+
+<!-- Enhanced Stats Cards -->
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-info rounded-3 p-2" style="background: var(--info-gradient) !important;">
+              <i class="bi bi-people text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3">
+            <div class="fw-bold fs-5" id="totalOwners">{{ owners|length }}</div>
+            <div class="text-muted small">Total Owners</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-success rounded-3 p-2" style="background: var(--success-gradient) !important;">
+              <i class="bi bi-building text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3">
+            <div class="fw-bold fs-5" id="departments">{{ owners|map(attribute='department')|unique|list|length }}</div>
+            <div class="text-muted small">Departments</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-warning rounded-3 p-2" style="background: var(--warning-gradient) !important;">
+              <i class="bi bi-envelope text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3">
+            <div class="fw-bold fs-5" id="emails">{{ owners|selectattr('email')|list|length }}</div>
+            <div class="text-muted small">Email Contacts</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-secondary rounded-3 p-2">
+              <i class="bi bi-person-check text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3">
+            <div class="fw-bold fs-5" id="active">{{ owners|length }}</div>
+            <div class="text-muted small">Active</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Enhanced Owners Table -->
+<div class="card border-0">
+  <div class="card-header bg-white border-bottom-0 py-3">
+    <div class="d-flex align-items-center justify-content-between">
+      <h5 class="mb-0 fw-semibold">
+        <i class="bi bi-table me-2 text-primary"></i>
+        Owner Directory
+      </h5>
+      <div class="d-flex align-items-center">
+        <div class="input-group input-group-sm" style="width: 250px;">
+          <span class="input-group-text bg-light border-end-0">
+            <i class="bi bi-search text-muted"></i>
+          </span>
+          <input type="text" class="form-control border-start-0 bg-light" placeholder="Search owners..." id="searchInput">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table id="ownersTable" class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-person me-2"></i>Owner
+            </th>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-envelope me-2"></i>Contact
+            </th>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-building me-2"></i>Department
+            </th>
+            <th class="border-0 fw-semibold text-dark text-center">
+              <i class="bi bi-gear me-2"></i>Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in owners %}
+          <tr data-id="{{ o.id }}" class="border-bottom">
+            <td class="py-3">
+              <div class="d-flex align-items-center">
+                <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; background: var(--primary-gradient) !important;">
+                  <i class="bi bi-person text-white"></i>
+                </div>
+                <div>
+                  <div class="fw-semibold" id="owner_name">{{ o.name }}</div>
+                  <small class="text-muted">System Owner</small>
+                </div>
+              </div>
+            </td>
+            <td class="py-3">
+              <div class="text-dark" id="owner_email">{{ o.email }}</div>
+              <small class="text-muted">
+                <i class="bi bi-envelope-fill me-1"></i>Email Contact
+              </small>
+            </td>
+            <td class="py-3">
+              {% if o.department %}
+                <span class="badge rounded-pill px-3 py-2" style="background: var(--info-gradient); color: white;" id="owner_department">
+                  <i class="bi bi-building-fill me-1"></i>{{ o.department }}
+                </span>
+              {% else %}
+                <span class="badge bg-secondary rounded-pill px-3 py-2">
+                  <i class="bi bi-dash-circle me-1"></i>Unassigned
+                </span>
+              {% endif %}
+            </td>
+            <td class="py-3 text-center">
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-primary" data-action="edit" title="Edit Owner">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-outline-danger" data-action="delete" title="Delete Owner">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Enhanced Modal -->
+<div class="modal fade" id="ownerModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-bottom-0 pb-0">
+        <div class="d-flex align-items-center">
+          <div class="bg-primary rounded-3 p-2 me-3" style="background: var(--primary-gradient) !important;">
+            <i class="bi bi-person-plus text-white"></i>
+          </div>
+          <h5 class="modal-title fw-bold" id="ownerModalTitle">Add Owner</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <form id="ownerForm">
+          <input type="hidden" id="ownerId" />
+          
+          <div class="mb-4">
+            <label class="form-label fw-semibold text-dark mb-2">
+              <i class="bi bi-person me-2 text-primary"></i>Full Name
+            </label>
+            <input class="form-control form-control-lg border-2" id="ownerName" required placeholder="Enter full name" />
+          </div>
+          
+          <div class="mb-4">
+            <label class="form-label fw-semibold text-dark mb-2">
+              <i class="bi bi-envelope me-2 text-primary"></i>Email Address
+            </label>
+            <input type="email" class="form-control form-control-lg border-2" id="ownerEmail" required placeholder="Enter email address" />
+          </div>
+          
+          <div class="mb-4">
+            <label class="form-label fw-semibold text-dark mb-2">
+              <i class="bi bi-building me-2 text-primary"></i>Department
+            </label>
+            <input class="form-control form-control-lg border-2" id="ownerDept" placeholder="Enter department (optional)" />
+            <div class="form-text">
+              <i class="bi bi-info-circle me-1"></i>Department assignment for organizational purposes
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-top-0 pt-0">
+        <button class="btn btn-outline-secondary btn-lg" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg me-2"></i>Cancel
+        </button>
+        <button class="btn btn-primary btn-lg" id="saveOwnerBtn">
+          <i class="bi bi-check-lg me-2"></i>Save Owner
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  $(function(){
+    // Initialize DataTable with enhanced styling
+    const table = $('#ownersTable').DataTable({ 
+      pageLength: 25,
+      dom: 'lrtip', // Hide default search box
+      language: {
+        emptyTable: '<div class="text-center py-4"><i class="bi bi-inbox display-4 text-muted"></i><br><span class="text-muted">No owners found</span></div>',
+        zeroRecords: '<div class="text-center py-4"><i class="bi bi-search display-4 text-muted"></i><br><span class="text-muted">No matching owners found</span></div>'
+      }
+    });
+    
+    // Custom search functionality
+    $('#searchInput').on('keyup', function() {
+      table.search(this.value).draw();
+    });
+    
+    const modal = new bootstrap.Modal(document.getElementById('ownerModal'));
+
+    // Add Owner Button
+    $('#addOwnerBtn').on('click', function(){
+      $('#ownerModalTitle').text('Add Owner');
+      $('#ownerModal .modal-header .bg-primary i').removeClass('bi-person-check').addClass('bi-person-plus');
+      $('#ownerId').val('');
+      $('#ownerName, #ownerEmail, #ownerDept').val('');
+      modal.show();
+    });
+
+    // Edit Owner Button
+    $(document).on('click', '[data-action="edit"]', function(){
+      const tr = $(this).closest('tr');
+      const ownerName = tr.find('td').eq(0).find('#owner_name').text().trim();
+      const ownerEmail = tr.find('td').eq(1).find('#owner_email').text().trim();
+      const ownerDepartment = tr.find('td').eq(2).find('#owner_department').text().trim();
+      $('#ownerModalTitle').text('Edit Owner');
+      $('#ownerModal .modal-header .bg-primary i').removeClass('bi-person-plus').addClass('bi-person-check');
+      $('#ownerId').val(tr.data('id'));
+      $('#ownerName').val(ownerName);
+      $('#ownerEmail').val(ownerEmail);
+      $('#ownerDept').val(ownerDepartment);
+      modal.show();
+    });
+
+    // Save Owner
+    $('#saveOwnerBtn').on('click', async function(){
+      const btn = $(this);
+      const originalHtml = btn.html();
+      btn.html('<span class="loading me-2"></span>Saving...').prop('disabled', true);
+      
+      const id = $('#ownerId').val();
+      const payload = {
+        name: $('#ownerName').val().trim(),
+        email: $('#ownerEmail').val().trim(),
+        department: $('#ownerDept').val().trim()
+      };
+      
+      if (!payload.name || !payload.email) { 
+        showToast('error', 'Name and Email are required');
+        btn.html(originalHtml).prop('disabled', false);
+        return; 
+      }
+      
+      try {
+        const response = await fetch(id ? `/owners/api/${id}` : '/owners/api', { 
+          method: id ? 'PUT' : 'POST', 
+          headers: {'Content-Type':'application/json'}, 
+          body: JSON.stringify(payload) 
+        });
+        
+        if (response.ok) {
+          showToast('success', `Owner ${id ? 'updated' : 'created'} successfully`);
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          throw new Error('Server error');
+        }
+      } catch (e) { 
+        showToast('error', 'Failed to save owner. Please try again.');
+        btn.html(originalHtml).prop('disabled', false);
+      }
+    });
+
+    // Delete Owner
+    $(document).on('click', '[data-action="delete"]', async function(){
+      if (!confirm('Are you sure you want to delete this owner?\n\nThis action cannot be undone.')) return;
+      
+      const btn = $(this);
+      const originalHtml = btn.html();
+      btn.html('<span class="loading"></span>').prop('disabled', true);
+      
+      const tr = $(this).closest('tr');
+      const id = tr.data('id');
+      
+      try { 
+        const response = await fetch(`/owners/api/${id}`, { method: 'DELETE' });
+        if (response.ok) {
+          showToast('success', 'Owner deleted successfully');
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          throw new Error('Server error');
+        }
+      } catch(e){ 
+        showToast('error', 'Failed to delete owner. Please try again.');
+        btn.html(originalHtml).prop('disabled', false);
+      }
+    });
+
+    // Toast notification function
+    function showToast(type, message) {
+      const toastHtml = `
+        <div class="toast align-items-center text-bg-${type === 'success' ? 'success' : 'danger'} border-0" role="alert">
+          <div class="d-flex">
+            <div class="toast-body">
+              <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+              ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+          </div>
+        </div>
+      `;
+      
+      const toastContainer = $('.toast-container');
+      if (toastContainer.length === 0) {
+        $('body').append('<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080;"></div>');
+      }
+      
+      $('.toast-container').append(toastHtml);
+      const toast = new bootstrap.Toast($('.toast').last()[0], { autohide: true, delay: 5000 });
+      toast.show();
+    }
+  });
+</script>
+{% endblock %}

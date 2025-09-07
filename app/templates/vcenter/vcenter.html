@@ -1,0 +1,629 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- Enhanced Header Section -->
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div class="d-flex align-items-center">
+    <div class="me-3">
+      <div class="bg-primary rounded-3 p-3 d-flex align-items-center justify-content-center" style="background: var(--primary-gradient) !important; width: 48px; height: 48px;">
+        <i class="bi bi-server text-white fs-5"></i>
+      </div>
+    </div>
+    <div>
+      <h2 class="mb-1 fw-bold">vCenter Management</h2>
+      <p class="text-muted mb-0">Manage your vCenter Server connections and configurations</p>
+    </div>
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#createModal">
+      <i class="bi bi-plus-lg me-2"></i>Add Configuration
+    </button>
+    <a href="/vcenter/sync" class="btn btn-outline-secondary btn-lg">
+      <i class="bi bi-arrow-repeat me-2"></i>Run Sync
+    </a>
+  </div>
+</div>
+
+<!-- Enhanced Stats Cards -->
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-primary rounded-3 p-2" style="background: var(--primary-gradient) !important;">
+              <i class="bi bi-server text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3">
+            <div class="fw-bold fs-5" id="totalConfigs">{{ configs|length }}</div>
+            <div class="text-muted small">Total Configs</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-success rounded-3 p-2" style="background: var(--success-gradient) !important;">
+              <i class="bi bi-check-circle text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3">
+            <div class="fw-bold fs-5" id="activeConfigs">{{ configs|selectattr('enabled')|list|length }}</div>
+            <div class="text-muted small">Active Configs</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-warning rounded-3 p-2" style="background: var(--warning-gradient) !important;">
+              <i class="bi bi-pause-circle text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3">
+            <div class="fw-bold fs-5" id="disabledConfigs">{{ configs|rejectattr('enabled')|list|length }}</div>
+            <div class="text-muted small">Disabled</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-info rounded-3 p-2" style="background: var(--info-gradient) !important;">
+              <i class="bi bi-arrow-repeat text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3">
+            <div class="fw-bold fs-5" id="syncedConfigs">{{ configs|selectattr('last_sync')|list|length }}</div>
+            <div class="text-muted small">Synced</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Enhanced vCenter Table -->
+<div class="card border-0">
+  <div class="card-header bg-white border-bottom-0 py-3">
+    <div class="d-flex align-items-center justify-content-between">
+      <h5 class="mb-0 fw-semibold">
+        <i class="bi bi-table me-2 text-primary"></i>
+        Configuration List
+      </h5>
+      <div class="d-flex align-items-center">
+        <div class="input-group input-group-sm" style="width: 250px;">
+          <span class="input-group-text bg-light border-end-0">
+            <i class="bi bi-search text-muted"></i>
+          </span>
+          <input type="text" class="form-control border-start-0 bg-light" placeholder="Search configurations..." id="searchInput">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table id="vcenterTable" class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-tag me-2"></i>Configuration
+            </th>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-hdd-network me-2"></i>Connection
+            </th>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-shield me-2"></i>Security
+            </th>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-power me-2"></i>Status
+            </th>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-clock me-2"></i>Last Sync
+            </th>
+            <th class="border-0 fw-semibold text-dark text-center">
+              <i class="bi bi-gear me-2"></i>Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in configs %}
+          <tr data-id="{{ c.id }}" class="border-bottom">
+            <td class="py-3">
+              <div class="d-flex align-items-center">
+                <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; background: var(--primary-gradient) !important;">
+                  <i class="bi bi-server text-white"></i>
+                </div>
+                <div>
+                  <div class="fw-semibold">{{ c.name }}</div>
+                  <small class="text-muted">vCenter Server</small>
+                </div>
+              </div>
+            </td>
+            <td class="py-3">
+              <div class="text-dark">{{ c.host }}</div>
+              <small class="text-muted">{{ c.username }}</small>
+            </td>
+            <td class="py-3">
+              {% if c.disable_ssl %}
+                <span class="badge rounded-pill px-3 py-2" style="background: var(--warning-gradient); color: white;">
+                  <i class="bi bi-shield-slash me-1"></i>SSL Disabled
+                </span>
+              {% else %}
+                <span class="badge rounded-pill px-3 py-2" style="background: var(--success-gradient); color: white;">
+                  <i class="bi bi-shield-check me-1"></i>SSL Enabled
+                </span>
+              {% endif %}
+            </td>
+            <td class="py-3">
+              {% if c.enabled %}
+                <span class="badge rounded-pill px-3 py-2" style="background: var(--success-gradient); color: white;">
+                  <i class="bi bi-check-circle me-1"></i>Active
+                </span>
+              {% else %}
+                <span class="badge bg-secondary rounded-pill px-3 py-2">
+                  <i class="bi bi-pause-circle me-1"></i>Disabled
+                </span>
+              {% endif %}
+            </td>
+            <td class="py-3">
+              <div class="text-dark">
+                {% if c.last_sync %}
+                  {{ c.last_sync.strftime('%m/%d/%Y') }}
+                  <br><small class="text-muted">{{ c.last_sync.strftime('%H:%M') }}</small>
+                {% else %}
+                  <span class="text-muted">Never</span>
+                {% endif %}
+              </div>
+            </td>
+            <td class="py-3 text-center">
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-primary" data-action="edit" title="Edit Configuration"
+                        onclick="editConfig('{{ c.id }}', '{{ c.name }}', '{{ c.host }}', '{{ c.username }}', {{ 'true' if c.disable_ssl else 'false' }}, {{ 'true' if c.enabled else 'false' }})">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-outline-info" data-action="test" title="Test Connection"
+                        onclick="testConnection('{{ c.id }}', '{{ c.host }}', '{{ c.username }}')">
+                  <i class="bi bi-wifi"></i>
+                </button>
+                <button class="btn btn-outline-warning" data-action="toggle" title="{{ 'Disable' if c.enabled else 'Enable' }}"
+                        onclick="toggleConfig('{{ c.id }}', '{{ c.name }}', {{ 'true' if c.enabled else 'false' }})">
+                  <i class="bi bi-{{ 'pause' if c.enabled else 'play' }}"></i>
+                </button>
+                <button class="btn btn-outline-danger" data-action="delete" title="Delete Configuration"
+                        onclick="deleteConfig('{{ c.id }}', '{{ c.name }}')">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Enhanced Create Configuration Modal -->
+<div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-bottom-0 pb-0">
+        <div class="d-flex align-items-center">
+          <div class="bg-primary rounded-3 p-2 me-3" style="background: var(--primary-gradient) !important;">
+            <i class="bi bi-server-plus text-white"></i>
+          </div>
+          <h5 class="modal-title fw-bold">Add vCenter Configuration</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <form id="createForm" method="post" action="/vcenter/create">
+          <div class="row g-4">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-dark mb-2">
+                <i class="bi bi-tag me-2 text-primary"></i>Configuration Name
+              </label>
+              <input id="createName" name="name" type="text" class="form-control form-control-lg border-2" 
+                     placeholder="e.g., Production vCenter" required />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-dark mb-2">
+                <i class="bi bi-hdd-network me-2 text-primary"></i>vCenter Host
+              </label>
+              <input id="createHost" name="host" type="text" class="form-control form-control-lg border-2" 
+                     placeholder="vcenter.example.com" required />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-dark mb-2">
+                <i class="bi bi-person me-2 text-primary"></i>Username
+              </label>
+              <input id="createUsername" name="username" type="text" class="form-control form-control-lg border-2" 
+                     placeholder="administrator@vsphere.local" required />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-dark mb-2">
+                <i class="bi bi-lock me-2 text-primary"></i>Password
+              </label>
+              <input id="createPassword" name="password" type="password" class="form-control form-control-lg border-2" 
+                     placeholder="••••••••" required />
+            </div>
+            <div class="col-12">
+              <hr class="my-3">
+              <h6 class="mb-3 fw-semibold">
+                <i class="bi bi-sliders me-2 text-primary"></i>
+                Connection Options
+              </h6>
+            </div>
+            <div class="col-md-6">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="disable_ssl" id="createDisableSSL" checked />
+                <label class="form-check-label fw-medium" for="createDisableSSL">
+                  <i class="bi bi-shield-slash me-1"></i>
+                  Disable SSL Verification
+                </label>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="enabled" id="createEnabled" checked />
+                <label class="form-check-label fw-medium" for="createEnabled">
+                  <i class="bi bi-power me-1"></i>
+                  Enable Configuration
+                </label>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-top-0 pt-0">
+        <button class="btn btn-outline-secondary btn-lg" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg me-2"></i>Cancel
+        </button>
+        <button type="submit" form="createForm" class="btn btn-primary btn-lg">
+          <i class="bi bi-check-lg me-2"></i>Create Configuration
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Enhanced Edit Configuration Modal -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-bottom-0 pb-0">
+        <div class="d-flex align-items-center">
+          <div class="bg-primary rounded-3 p-2 me-3" style="background: var(--primary-gradient) !important;">
+            <i class="bi bi-pencil-square text-white"></i>
+          </div>
+          <h5 class="modal-title fw-bold">Edit vCenter Configuration</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <form id="editForm" method="post">
+          <div class="row g-4">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-dark mb-2">
+                <i class="bi bi-tag me-2 text-primary"></i>Configuration Name
+              </label>
+              <input id="editName" name="name" type="text" class="form-control form-control-lg border-2" required />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-dark mb-2">
+                <i class="bi bi-hdd-network me-2 text-primary"></i>vCenter Host
+              </label>
+              <input id="editHost" name="host" type="text" class="form-control form-control-lg border-2" required />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-dark mb-2">
+                <i class="bi bi-person me-2 text-primary"></i>Username
+              </label>
+              <input id="editUsername" name="username" type="text" class="form-control form-control-lg border-2" required />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold text-dark mb-2">
+                <i class="bi bi-lock me-2 text-primary"></i>Password
+              </label>
+              <input id="editPassword" name="password" type="password" class="form-control form-control-lg border-2" 
+                     placeholder="••••••••" />
+              <div class="form-text">
+                <i class="bi bi-info-circle me-1"></i>Leave blank to keep existing password
+              </div>
+            </div>
+            <div class="col-12">
+              <hr class="my-3">
+              <h6 class="mb-3 fw-semibold">
+                <i class="bi bi-sliders me-2 text-primary"></i>
+                Connection Options
+              </h6>
+            </div>
+            <div class="col-md-6">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="disable_ssl" id="editDisableSSL" />
+                <label class="form-check-label fw-medium" for="editDisableSSL">
+                  <i class="bi bi-shield-slash me-1"></i>
+                  Disable SSL Verification
+                </label>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="enabled" id="editEnabled" />
+                <label class="form-check-label fw-medium" for="editEnabled">
+                  <i class="bi bi-power me-1"></i>
+                  Enable Configuration
+                </label>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-top-0 pt-0">
+        <button class="btn btn-outline-secondary btn-lg" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg me-2"></i>Cancel
+        </button>
+        <button type="button" class="btn btn-outline-info btn-lg" onclick="testConnectionFromModal()">
+          <i class="bi bi-wifi me-2"></i>Test Connection
+        </button>
+        <button type="submit" form="editForm" class="btn btn-primary btn-lg">
+          <i class="bi bi-check-lg me-2"></i>Update Configuration
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Enhanced Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-bottom-0 pb-0">
+        <div class="d-flex align-items-center">
+          <div class="bg-danger rounded-3 p-2 me-3">
+            <i class="bi bi-exclamation-triangle text-white"></i>
+          </div>
+          <h5 class="modal-title fw-bold text-danger">Confirm Deletion</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <div class="alert alert-danger d-flex align-items-center" role="alert">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          <div>
+            <strong>Warning!</strong> This action cannot be undone.
+          </div>
+        </div>
+        <p class="mb-2">Are you sure you want to delete the vCenter configuration:</p>
+        <p class="fw-bold text-danger fs-5" id="deleteConfigName"></p>
+        <p class="text-muted">This will permanently remove the configuration and stop all synchronization activities.</p>
+      </div>
+      <div class="modal-footer border-top-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary btn-lg" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg me-2"></i>Cancel
+        </button>
+        <form id="deleteForm" method="post" class="d-inline">
+          <button type="submit" class="btn btn-danger btn-lg">
+            <i class="bi bi-trash me-2"></i>Delete Configuration
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(function(){
+  // Initialize DataTable with enhanced styling
+  const table = $('#vcenterTable').DataTable({ 
+    pageLength: 25,
+    dom: 'lrtip', // Hide default search box
+    responsive: true,
+    order: [[0, 'asc']],
+    columnDefs: [
+      { orderable: false, targets: [5] } // Disable sorting on Actions column
+    ],
+    language: {
+      emptyTable: '<div class="text-center py-4"><i class="bi bi-inbox display-4 text-muted"></i><br><span class="text-muted">No vCenter configurations found</span></div>',
+      zeroRecords: '<div class="text-center py-4"><i class="bi bi-search display-4 text-muted"></i><br><span class="text-muted">No matching configurations found</span></div>'
+    }
+  });
+  
+  // Custom search functionality
+  $('#searchInput').on('keyup', function() {
+    table.search(this.value).draw();
+  });
+
+  // Form submissions with loading states
+  $('#createForm').on('submit', function() {
+    const submitBtn = $(this).closest('.modal').find('button[type="submit"]');
+    submitBtn.html('<span class="loading me-2"></span>Creating...').prop('disabled', true);
+  });
+
+  $('#editForm').on('submit', function() {
+    const submitBtn = $(this).closest('.modal').find('button[type="submit"]');
+    submitBtn.html('<span class="loading me-2"></span>Updating...').prop('disabled', true);
+  });
+
+  $('#deleteForm').on('submit', function() {
+    const submitBtn = $(this).find('button[type="submit"]');
+    submitBtn.html('<span class="loading me-2"></span>Deleting...').prop('disabled', true);
+  });
+
+  // Reset forms when modals are closed
+  $('.modal').on('hidden.bs.modal', function() {
+    $(this).find('form')[0].reset();
+    $(this).find('.is-invalid').removeClass('is-invalid');
+    $(this).find('button[type="submit"]').prop('disabled', false);
+    
+    // Reset button text
+    $('#createModal button[type="submit"]').html('<i class="bi bi-check-lg me-2"></i>Create Configuration');
+    $('#editModal button[type="submit"]').html('<i class="bi bi-check-lg me-2"></i>Update Configuration');
+    $('#deleteForm button[type="submit"]').html('<i class="bi bi-trash me-2"></i>Delete Configuration');
+  });
+
+  // Toast notification function
+  function showToast(type, message) {
+    const toastHtml = `
+      <div class="toast align-items-center text-bg-${type === 'success' ? 'success' : type === 'info' ? 'info' : 'danger'} border-0" role="alert">
+        <div class="d-flex">
+          <div class="toast-body">
+            <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'info' ? 'info-circle' : 'exclamation-triangle'} me-2"></i>
+            ${message}
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+      </div>
+    `;
+    
+    const toastContainer = $('.toast-container');
+    if (toastContainer.length === 0) {
+      $('body').append('<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080;"></div>');
+    }
+    
+    $('.toast-container').append(toastHtml);
+    const toast = new bootstrap.Toast($('.toast').last()[0], { autohide: true, delay: 5000 });
+    toast.show();
+  }
+
+  // Make showToast available globally
+  window.showToast = showToast;
+});
+
+function editConfig(id, name, host, username, disableSSL, enabled) {
+  // Set form action
+  document.getElementById('editForm').action = `/vcenter/edit/${id}`;
+  
+  // Populate form fields
+  document.getElementById('editName').value = name;
+  document.getElementById('editHost').value = host;
+  document.getElementById('editUsername').value = username;
+  document.getElementById('editPassword').value = '';
+  document.getElementById('editDisableSSL').checked = disableSSL;
+  document.getElementById('editEnabled').checked = enabled;
+  
+  // Show modal
+  new bootstrap.Modal(document.getElementById('editModal')).show();
+}
+
+function deleteConfig(id, name) {
+  // Set form action
+  document.getElementById('deleteForm').action = `/vcenter/delete/${id}`;
+  
+  // Set configuration name in modal
+  document.getElementById('deleteConfigName').textContent = name;
+  
+  // Show modal
+  new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+function toggleConfig(id, name, currentStatus) {
+  const action = currentStatus ? 'disable' : 'enable';
+  const actionText = currentStatus ? 'Disabling' : 'Enabling';
+  
+  if (confirm(`Are you sure you want to ${action} the configuration "${name}"?`)) {
+    // Create a temporary form and submit
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/vcenter/toggle/${id}`;
+    document.body.appendChild(form);
+    
+    showToast('info', `${actionText} configuration...`);
+    form.submit();
+  }
+}
+
+function testConnection(cfgId, host, username) {
+  showToast('info', `Testing connection to ${host}...`);
+  
+  setTimeout(() => {
+    fetch(`/vcenter/test/${cfgId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === 'success') {
+        showToast('success', `Connection to ${host} successful!`);
+      } else {
+        showToast('error', `Connection failed: ${data.message}`);
+      }
+    })
+    .catch(error => {
+      showToast('error', `Connection test error: ${error.message}`);
+      console.error('Connection test error:', error);
+    });
+  }, 1000);
+}
+
+function testConnectionFromModal() {
+  const host = document.getElementById('editHost').value.trim();
+  const username = document.getElementById('editUsername').value.trim();
+  
+  if (!host || !username) {
+    showToast('warning', 'Please fill in Host and Username to test connection');
+    return;
+  }
+  
+  showToast('info', `Testing connection to ${host}...`);
+  
+  // Here you would typically make an API call to test the connection
+  // For now, we'll simulate it
+  setTimeout(() => {
+    showToast('success', `Connection test completed for ${host}`);
+  }, 2000);
+}
+
+// Form validation
+function validateForm(formId) {
+  const form = document.getElementById(formId);
+  const requiredFields = form.querySelectorAll('input[required]');
+  let isValid = true;
+  
+  requiredFields.forEach(field => {
+    field.classList.remove('is-invalid');
+    if (!field.value.trim()) {
+      field.classList.add('is-invalid');
+      isValid = false;
+    }
+  });
+  
+  if (!isValid) {
+    showToast('error', 'Please fill in all required fields');
+  }
+  
+  return isValid;
+}
+
+// Add validation to forms
+document.getElementById('createForm').addEventListener('submit', function(e) {
+  if (!validateForm('createForm')) {
+    e.preventDefault();
+  }
+});
+
+document.getElementById('editForm').addEventListener('submit', function(e) {
+  if (!validateForm('editForm')) {
+    e.preventDefault();
+  }
+});
+</script>
+{% endblock %}

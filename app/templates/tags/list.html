@@ -1,0 +1,378 @@
+{% extends 'base.html' %}
+{% block content %}
+<!-- Enhanced Header Section -->
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div class="d-flex align-items-center">
+    <div class="me-3">
+      <div class="bg-primary rounded-3 p-3 d-flex align-items-center justify-content-center" style="background: var(--primary-gradient) !important; width: 48px; height: 48px;">
+        <i class="bi bi-tags text-white fs-5"></i>
+      </div>
+    </div>
+    <div>
+      <h2 class="mb-1 fw-bold">Tag Management</h2>
+      <p class="text-muted mb-0">Organize and categorize your virtual machines</p>
+    </div>
+  </div>
+  <button class="btn btn-primary btn-lg" id="addTagBtn">
+    <i class="bi bi-plus-lg me-2"></i>Add Tag
+  </button>
+</div>
+
+<!-- Enhanced Stats Cards -->
+<div class="row mb-4">
+  <div class="col-md-4">
+    <div class="card border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-info rounded-3 p-2" style="background: var(--info-gradient) !important;">
+              <i class="bi bi-tags text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3">
+            <div class="fw-bold fs-5" id="totalTags">{{ tags|length }}</div>
+            <div class="text-muted small">Total Tags</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-success rounded-3 p-2" style="background: var(--success-gradient) !important;">
+              <i class="bi bi-check-circle text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3">
+            <div class="fw-bold fs-5" id="activeTags">{{ tags|selectattr("description")|list|length }}</div>
+            <div class="text-muted small">With Description</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="flex-shrink-0">
+            <div class="bg-warning rounded-3 p-2" style="background: var(--warning-gradient) !important;">
+              <i class="bi bi-bookmark text-white"></i>
+            </div>
+          </div>
+          <div class="ms-3">
+            <div class="fw-bold fs-5" id="recentTags">{{ (tags|length / 5)|round|int if tags|length > 5 else tags|length }}</div>
+            <div class="text-muted small">Recently Used</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Enhanced Tags Table -->
+<div class="card border-0">
+  <div class="card-header bg-white border-bottom-0 py-3">
+    <div class="d-flex align-items-center justify-content-between">
+      <h5 class="mb-0 fw-semibold">
+        <i class="bi bi-table me-2 text-primary"></i>
+        Tags Overview
+      </h5>
+      <div class="d-flex align-items-center">
+        <div class="input-group input-group-sm" style="width: 250px;">
+          <span class="input-group-text bg-light border-end-0">
+            <i class="bi bi-search text-muted"></i>
+          </span>
+          <input type="text" class="form-control border-start-0 bg-light" placeholder="Search tags..." id="searchInput">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table id="tagsTable" class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-tag me-2"></i>Tag Name
+            </th>
+            <th class="border-0 fw-semibold text-dark">
+              <i class="bi bi-info-circle me-2"></i>Description
+            </th>
+            <th class="border-0 fw-semibold text-dark text-center">
+              <i class="bi bi-gear me-2"></i>Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in tags %}
+          <tr data-id="{{ t.id }}" class="border-bottom">
+            <td class="py-3">
+              <div class="d-flex align-items-center">
+                <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; background: var(--primary-gradient) !important;">
+                  <i class="bi bi-tag text-white"></i>
+                </div>
+                <div>
+                  <div class="fw-semibold" id="tag_name">{{ t.name }}</div>
+                  <small class="text-muted">Categorization Tag</small>
+                </div>
+              </div>
+            </td>
+            <td class="py-3">
+              <div class="text-dark" id="tag_desc">
+                {% if t.description %}
+                  {{ t.description }}
+                {% else %}
+                  <span class="text-muted fst-italic">No description provided</span>
+                {% endif %}
+              </div>
+            </td>
+            <td class="py-3 text-center">
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-primary" data-action="edit" title="Edit Tag">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-outline-danger" data-action="delete" title="Delete Tag">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Enhanced Modal -->
+<div class="modal fade" id="tagModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-bottom-0 pb-0">
+        <div class="d-flex align-items-center">
+          <div class="bg-primary rounded-3 p-2 me-3" style="background: var(--primary-gradient) !important;">
+            <i class="bi bi-tag-fill text-white"></i>
+          </div>
+          <h5 class="modal-title fw-bold" id="tagModalTitle">Add Tag</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <form id="tagForm">
+          <input type="hidden" id="tagId" />
+          
+          <div class="mb-4">
+            <label class="form-label fw-semibold text-dark mb-2">
+              <i class="bi bi-tag me-2 text-primary"></i>Tag Name
+            </label>
+            <input class="form-control form-control-lg border-2" id="tagName" required placeholder="Enter tag name (e.g., Production, Development)" />
+            <div class="form-text">
+              <i class="bi bi-lightbulb me-1"></i>Use descriptive names for better organization
+            </div>
+          </div>
+          
+          <div class="mb-4">
+            <label class="form-label fw-semibold text-dark mb-2">
+              <i class="bi bi-info-circle me-2 text-primary"></i>Description
+            </label>
+            <textarea class="form-control form-control-lg border-2" id="tagDesc" rows="3" placeholder="Describe what this tag represents and when to use it..."></textarea>
+            <div class="form-text">
+              <i class="bi bi-info-circle me-1"></i>Optional: Add a description to help others understand this tag's purpose
+            </div>
+          </div>
+          
+          <!-- Tag Preview -->
+          <div class="bg-light rounded-3 p-3 mb-3">
+            <div class="small text-muted mb-2">Preview:</div>
+            <span class="badge rounded-pill px-3 py-2" style="background: var(--primary-gradient); color: white;" id="tagPreview">
+              <i class="bi bi-tag me-1"></i>New Tag
+            </span>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-top-0 pt-0">
+        <button class="btn btn-outline-secondary btn-lg" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg me-2"></i>Cancel
+        </button>
+        <button class="btn btn-primary btn-lg" id="saveTagBtn">
+          <i class="bi bi-check-lg me-2"></i>Save Tag
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  $(function(){
+    // Initialize DataTable with enhanced styling
+    const table = $('#tagsTable').DataTable({ 
+      pageLength: 25,
+      dom: 'lrtip', // Hide default search box
+      language: {
+        emptyTable: '<div class="text-center py-4"><i class="bi bi-tags display-4 text-muted"></i><br><span class="text-muted">No tags found</span><br><small class="text-muted">Create your first tag to get started</small></div>',
+        zeroRecords: '<div class="text-center py-4"><i class="bi bi-search display-4 text-muted"></i><br><span class="text-muted">No matching tags found</span></div>'
+      }
+    });
+    
+    // Custom search functionality
+    $('#searchInput').on('keyup', function() {
+      table.search(this.value).draw();
+    });
+    
+    const modal = new bootstrap.Modal(document.getElementById('tagModal'));
+
+    // Real-time tag preview
+    $('#tagName').on('input', function() {
+      const name = $(this).val().trim() || 'New Tag';
+      $('#tagPreview').html(`<i class="bi bi-tag me-1"></i>${name}`);
+    });
+
+    // Add Tag Button
+    $('#addTagBtn').on('click', function(){
+      $('#tagModalTitle').text('Add Tag');
+      $('#tagModal .modal-header .bg-primary i').removeClass('bi-tag').addClass('bi-tag-fill');
+      $('#tagId').val('');
+      $('#tagName, #tagDesc').val('');
+      $('#tagPreview').html('<i class="bi bi-tag me-1"></i>New Tag');
+      modal.show();
+      // Focus on name input
+      setTimeout(() => $('#tagName').focus(), 300);
+    });
+
+    // Edit Tag Button
+    $(document).on('click', '[data-action="edit"]', function(){
+      const tr = $(this).closest('tr');
+      // Extract plain text for tag name and description
+      const tagName = tr.find('td').eq(0).find('#tag_name').text().trim();
+      const description = tr.find('td').eq(1).find('#tag_desc').text().trim();
+      
+      $('#tagModalTitle').text('Edit Tag');
+      $('#tagModal .modal-header .bg-primary i').removeClass('bi-tag-fill').addClass('bi-tag');
+      $('#tagId').val(tr.data('id'));
+      $('#tagName').val(tagName);
+      $('#tagDesc').val(description === 'No description provided' ? '' : description);
+      $('#tagPreview').html(`<i class="bi bi-tag me-1"></i>${tagName}`);
+      modal.show();
+    });
+
+    // Save Tag
+    $('#saveTagBtn').on('click', async function(){
+      const btn = $(this);
+      const originalHtml = btn.html();
+      btn.html('<span class="loading me-2"></span>Saving...').prop('disabled', true);
+      
+      const id = $('#tagId').val();
+      const payload = { 
+        name: $('#tagName').val().trim(), 
+        description: $('#tagDesc').val().trim() 
+      };
+      
+      if (!payload.name) { 
+        showToast('error', 'Tag name is required');
+        btn.html(originalHtml).prop('disabled', false);
+        $('#tagName').focus();
+        return; 
+      }
+      
+      try {
+        const response = await fetch(id ? `/tags/api/${id}` : '/tags/api', { 
+          method: id ? 'PUT' : 'POST', 
+          headers: {'Content-Type':'application/json'}, 
+          body: JSON.stringify(payload) 
+        });
+        
+        if (response.ok) {
+          showToast('success', `Tag "${payload.name}" ${id ? 'updated' : 'created'} successfully`);
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Server error');
+        }
+      } catch (e) { 
+        showToast('error', e.message || 'Failed to save tag. Please try again.');
+        btn.html(originalHtml).prop('disabled', false);
+      }
+    });
+
+    // Delete Tag Button - Show confirmation modal
+    $(document).on('click', '[data-action="delete"]', function(){
+      const tr = $(this).closest('tr');
+      const data = table.row(tr).data();
+      const tagName = data[0].replace(/<[^>]*>/g, '').trim(); // Strip HTML tags
+      const tagId = tr.data('id');
+      
+      $('#deleteTagName').text(tagName);
+      $('#confirmDeleteTagBtn').data('tag-id', tagId).data('tag-name', tagName);
+      deleteModal.show();
+    });
+
+    // Confirm Delete Tag
+    $('#confirmDeleteTagBtn').on('click', async function(){
+      const btn = $(this);
+      const originalHtml = btn.html();
+      const tagId = btn.data('tag-id');
+      const tagName = btn.data('tag-name');
+      
+      btn.html('<span class="loading me-2"></span>Deleting...').prop('disabled', true);
+      
+      try { 
+        const response = await fetch(`/tags/api/${tagId}`, { method: 'DELETE' });
+        if (response.ok) {
+          deleteModal.hide();
+          showToast('success', `Tag "${tagName}" deleted successfully`);
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Server error');
+        }
+      } catch(e){ 
+        showToast('error', e.message || 'Failed to delete tag. Please try again.');
+        btn.html(originalHtml).prop('disabled', false);
+      }
+    });
+
+    // Toast notification function
+    function showToast(type, message) {
+      const toastHtml = `
+        <div class="toast align-items-center text-bg-${type === 'success' ? 'success' : 'danger'} border-0" role="alert">
+          <div class="d-flex">
+            <div class="toast-body">
+              <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+              ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+          </div>
+        </div>
+      `;
+      
+      const toastContainer = $('.toast-container');
+      if (toastContainer.length === 0) {
+        $('body').append('<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080;"></div>');
+      }
+      
+      $('.toast-container').append(toastHtml);
+      const toast = new bootstrap.Toast($('.toast').last()[0], { autohide: true, delay: 5000 });
+      toast.show();
+    }
+
+    // Keyboard shortcuts
+    $(document).on('keydown', function(e) {
+      // Ctrl/Cmd + K to open search
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        $('#searchInput').focus();
+      }
+      // Escape to close modal
+      if (e.key === 'Escape' && $('#tagModal').hasClass('show')) {
+        modal.hide();
+      }
+    });
+  });
+</script>
+{% endblock %}
