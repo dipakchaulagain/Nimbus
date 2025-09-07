@@ -30,7 +30,7 @@ Prerequisites: Docker and Docker Compose
 ```
 FLASK_ENV=development
 FLASK_APP=run.py
-SECRET_KEY=ddfSDfdr3sd22Sdfdf@sfrf
+SECRET_KEY=your_secret_key
 # Database
 DATABASE_URL=postgresql+psycopg2://postgres:password@db:5432/vm_inventory
 # Scheduler
@@ -109,24 +109,10 @@ Auditing
 - Source IP is resolved from `X-Forwarded-For` or `X-Real-IP` headers (set by Nginx); falls back to `remote_addr`
 - View logs in the UI under Audit Logs (superadmin only)
 
-Nginx and Client IP Forwarding
-------------------------------
-The included Nginx proxy forwards client IPs:
-- `X-Real-IP: $remote_addr`
-- `X-Forwarded-For: $proxy_add_x_forwarded_for`
-
-The application prefers the leftmost address in `X-Forwarded-For`, then `X-Real-IP`.
-
 Background Sync
 ---------------
 - APScheduler runs a background job to synchronize vCenter data on an interval defined by `VCENTER_SYNC_INTERVAL` (minutes)
 - Manual sync can be triggered from the vCenter page (Editor or Superadmin)
-
-Running Tests
--------------
-```
-pytest -q
-```
 
 Troubleshooting
 ---------------
