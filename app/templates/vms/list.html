@@ -22,11 +22,7 @@
         <i class="bi bi-funnel me-2"></i>Bulk Actions
       </button>
       <ul class="dropdown-menu">
-        {% if current_user.role in ['editor', 'superadmin'] %}
-        <li><a class="dropdown-item" href="#" onclick="bulkAction('power-on')"><i class="bi bi-play me-2"></i>Power On Selected</a></li>
-        <li><a class="dropdown-item" href="#" onclick="bulkAction('power-off')"><i class="bi bi-stop me-2"></i>Power Off Selected</a></li>
-        {% endif %}
-        <li><hr class="dropdown-divider"></li>
+        
         {% if current_user.role in ['editor', 'superadmin'] %}
         <li><a class="dropdown-item" href="#" onclick="bulkAction('assign-owners')"><i class="bi bi-people me-2"></i>Assign Owners</a></li>
         <li><a class="dropdown-item" href="#" onclick="bulkAction('assign-tags')"><i class="bi bi-tags me-2"></i>Assign Tags</a></li>
@@ -356,38 +352,19 @@
                 <button class="btn btn-outline-info" 
                         data-action="owners" 
                         data-vm-id="{{ vm.id }}"
+                        data-vm-name="{{ vm.name }}"
                         title="Manage Owners">
                   <i class="bi bi-people"></i>
                 </button>
                 <button class="btn btn-outline-success" 
                         data-action="tags" 
                         data-vm-id="{{ vm.id }}"
+                        data-vm-name="{{ vm.name }}"
                         title="Manage Tags">
                   <i class="bi bi-tags"></i>
                 </button>
                 {% endif %}
-                <div class="dropdown">
-                  <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" title="More Actions">
-                    <i class="bi bi-three-dots"></i>
-                  </button>
-                  <ul class="dropdown-menu">
-                    {% if current_user.role in ['editor', 'superadmin'] %}
-                      {% if vm.power_state == 'poweredOff' %}
-                      <li><a class="dropdown-item text-success" href="#" data-action="power-on" data-vm-id="{{ vm.id }}">
-                        <i class="bi bi-play me-2"></i>Power On
-                      </a></li>
-                      {% else %}
-                      <li><a class="dropdown-item text-warning" href="#" data-action="power-off" data-vm-id="{{ vm.id }}">
-                        <i class="bi bi-stop me-2"></i>Power Off
-                      </a></li>
-                      {% endif %}
-                      <li><hr class="dropdown-divider"></li>
-                      <li><a class="dropdown-item text-danger" href="#" data-action="delete" data-vm-id="{{ vm.id }}">
-                        <i class="bi bi-trash me-2"></i>Delete
-                      </a></li>
-                    {% endif %}
-                  </ul>
-                </div>
+                
               </div>
             </td>
           </tr>
@@ -438,7 +415,7 @@
               </div>
               
               <div class="d-flex gap-2">
-                <button class="btn btn-primary flex-fill" data-action="view" data-vm-id="{{ vm.id }}">
+                <button class="btn btn-primary flex-fill" data-action="view" data-vm-id="{{ vm.id }}" data-vm-name="{{ vm.name }}">
                   <i class="bi bi-eye me-1"></i>Details
                 </button>
                 <div class="dropdown">
@@ -446,10 +423,10 @@
                     <i class="bi bi-three-dots"></i>
                   </button>
                   <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="#" data-action="owners" data-vm-id="{{ vm.id }}">
+                    <li><a class="dropdown-item" href="#" data-action="owners" data-vm-id="{{ vm.id }}" data-vm-name="{{ vm.name }}">
                       <i class="bi bi-people me-2"></i>Owners
                     </a></li>
-                    <li><a class="dropdown-item" href="#" data-action="tags" data-vm-id="{{ vm.id }}">
+                    <li><a class="dropdown-item" href="#" data-action="tags" data-vm-id="{{ vm.id }}" data-vm-name="{{ vm.name }}" >
                       <i class="bi bi-tags me-2"></i>Tags
                     </a></li>
                   </ul>
@@ -524,13 +501,9 @@
           </div>
           <div class="mb-4">
             <label class="form-label fw-semibold text-dark mb-2">
-              <i class="bi bi-envelope me-2 text-primary"></i>Owner Email Addresses
+              <i class="bi bi-envelope me-2 text-primary"></i>Available Owners
             </label>
-            <textarea class="form-control form-control-lg border-2" id="ownersInput" rows="4" 
-                      placeholder="Enter email addresses separated by commas or new lines&#10;user1@example.com&#10;user2@example.com"></textarea>
-            <div class="form-text">
-              <i class="bi bi-info-circle me-1"></i>You can enter multiple email addresses separated by commas or new lines
-            </div>
+            <div id="availableOwners" class="d-flex flex-column gap-2"></div>
           </div>
           <div class="mb-3">
             <label class="form-label fw-semibold text-dark mb-2">Current Owners</label>
@@ -543,9 +516,6 @@
       <div class="modal-footer border-top-0 pt-0">
         <button class="btn btn-outline-secondary btn-lg" data-bs-dismiss="modal">
           <i class="bi bi-x-lg me-2"></i>Cancel
-        </button>
-        <button class="btn btn-primary btn-lg" id="saveOwnersBtn">
-          <i class="bi bi-check-lg me-2"></i>Save Owners
         </button>
       </div>
     </div>
@@ -576,25 +546,11 @@
           </div>
           <div class="mb-4">
             <label class="form-label fw-semibold text-dark mb-2">
-              <i class="bi bi-tags me-2 text-primary"></i>Tags
+              <i class="bi bi-tags me-2 text-primary"></i>Available Tags
             </label>
-            <input type="text" class="form-control form-control-lg border-2" id="tagsInput" 
-                   placeholder="web, database, production, critical">
-            <div class="form-text">
-              <i class="bi bi-info-circle me-1"></i>Enter tags separated by commas (e.g., web, db, prod)
+            <div id="availableTags" class="d-flex flex-wrap gap-2"></div>
             </div>
-          </div>
-          <div class="mb-4">
-            <label class="form-label fw-semibold text-dark mb-2">Suggested Tags</label>
-            <div id="suggestedTags" class="d-flex flex-wrap gap-2">
-              <button type="button" class="btn btn-outline-primary btn-sm tag-suggestion" data-tag="production">production</button>
-              <button type="button" class="btn btn-outline-primary btn-sm tag-suggestion" data-tag="staging">staging</button>
-              <button type="button" class="btn btn-outline-primary btn-sm tag-suggestion" data-tag="development">development</button>
-              <button type="button" class="btn btn-outline-primary btn-sm tag-suggestion" data-tag="web">web</button>
-              <button type="button" class="btn btn-outline-primary btn-sm tag-suggestion" data-tag="database">database</button>
-              <button type="button" class="btn btn-outline-primary btn-sm tag-suggestion" data-tag="backup">backup</button>
-            </div>
-          </div>
+          
           <div class="mb-3">
             <label class="form-label fw-semibold text-dark mb-2">Current Tags</label>
             <div id="currentTags" class="border rounded-3 p-3 bg-light">
@@ -606,9 +562,6 @@
       <div class="modal-footer border-top-0 pt-0">
         <button class="btn btn-outline-secondary btn-lg" data-bs-dismiss="modal">
           <i class="bi bi-x-lg me-2"></i>Cancel
-        </button>
-        <button class="btn btn-primary btn-lg" id="saveTagsBtn">
-          <i class="bi bi-check-lg me-2"></i>Save Tags
         </button>
       </div>
     </div>
@@ -763,20 +716,75 @@ $(function(){
   // Form submissions with loading states
   $('#assignOwnersForm').on('submit', function(e) {
     e.preventDefault();
+    const vmId = $('#ownersVmId').val();
     const submitBtn = $('#saveOwnersBtn');
     submitBtn.html('<span class="loading me-2"></span>Saving...').prop('disabled', true);
-    // Add your save logic here
+
+    const emails = Array.from(document.getElementById('ownersSelect').selectedOptions).map(o => o.value);
+
+    fetch(`/vms/${vmId}/owners`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emails })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === 'ok') {
+        renderOwnersList(data.owners || []);
+        $('#ownersInput').val('');
+        showToast('success', 'Owners updated successfully');
+      } else {
+        showToast('error', 'Failed to update owners');
+      }
+    })
+    .catch(err => {
+      showToast('error', `Error updating owners: ${err.message}`);
+    })
+    .finally(() => {
+      submitBtn.html('<i class="bi bi-check-lg me-2"></i>Save Owners').prop('disabled', false);
+    });
   });
+
+  // Save Owners button removed; assignments are done via per-owner Add
 
   $('#assignTagsForm').on('submit', function(e) {
     e.preventDefault();
-    const submitBtn = $('#saveTagsBtn');
-    submitBtn.html('<span class="loading me-2"></span>Saving...').prop('disabled', true);
-    // Add your save logic here
+    const vmId = $('#tagsVmId').val();
+    const current = Array.from(document.querySelectorAll('#currentTags [data-tag-name]')).map(el => el.getAttribute('data-tag-name'));
+    fetch(`/vms/api/${encodeURIComponent(vmId)}/tags`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tags: current })
+    })
+    .then(async r => {
+      if (!r.ok) {
+        const text = await r.text();
+        throw new Error(`${r.status} ${r.statusText} - ${text.slice(0, 120)}`);
+      }
+      return r.json();
+    })
+    .then(data => {
+      if (data.status === 'ok') {
+        renderTagsList(data.tags || []);
+        // refresh available tags
+        return fetch('/tags/api').then(r => r.json()).then(allTags => {
+          renderAvailableTags(allTags, data.tags || []);
+          showToast('success', 'Tags updated');
+        });
+      }
+      showToast('error', 'Failed to save tags');
+    })
+    .catch(err => showToast('error', `Error saving tags: ${err.message}`));
   });
 
-  // Reset forms when modals are closed
+  // Reset forms when modals are closed and ensure no element inside retains focus
   $('.modal').on('hidden.bs.modal', function() {
+    // If focus is inside the now-hidden modal, blur it to avoid aria-hidden focus issues
+    const active = document.activeElement;
+    if (active && this.contains(active)) {
+      active.blur();
+    }
+
     $(this).find('form')[0]?.reset();
     $(this).find('.is-invalid').removeClass('is-invalid');
     $(this).find('button[type="submit"], #saveOwnersBtn, #saveTagsBtn').prop('disabled', false);
@@ -815,23 +823,397 @@ $(function(){
   window.showToast = showToast;
   
   window.showVMDetails = function(vmId, vmName) {
-    $('#vmDetailSubtitle').text(`VM ID: ${vmId}`);
+    $('#vmDetailSubtitle').text(`Loading details for VM ID: ${vmId}...`);
+    $('#vmDetailBody').html(`
+      <div class="d-flex justify-content-center align-items-center py-5">
+        <div class="loading"></div>
+        <span class="ms-2">Loading VM details...</span>
+      </div>
+    `);
     $('#vmDetailModal').modal('show');
-    // Add your VM details loading logic here
+
+    fetch(`/vms/api/${vmId}`)
+      .then(response => {
+        if (!response.ok) throw new Error(`Failed to load VM: ${response.status}`);
+        return response.json();
+      })
+      .then(data => {
+        const name = data.name || vmName || 'Unknown VM';
+        $('#vmDetailSubtitle').html(`<strong>${name}</strong>`);
+
+        const powerBadge = (() => {
+          const state = (data.power_state || '').toLowerCase();
+          if (state === 'poweredon') {
+            return '<span class="badge rounded-pill px-3 py-2" style="background: var(--success-gradient); color: white;"><i class="bi bi-play-fill me-1"></i>Running</span>';
+          }
+          if (state === 'poweredoff') {
+            return '<span class="badge bg-secondary rounded-pill px-3 py-2"><i class="bi bi-stop-fill me-1"></i>Stopped</span>';
+          }
+          return `<span class="badge rounded-pill px-3 py-2" style="background: var(--warning-gradient); color: white;"><i class="bi bi-pause-fill me-1"></i>${data.power_state || 'Unknown'}</span>`;
+        })();
+
+        const ownersHtml = (data.owners && data.owners.length)
+          ? data.owners.map(o => `
+              <div class="d-flex align-items-center mb-2">
+                <div class="bg-info rounded-circle d-inline-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px; background: var(--info-gradient) !important;">
+                  <i class="bi bi-person text-white"></i>
+                </div>
+                <div>
+                  <div class="fw-semibold small">${o.name || o.email}${o.department ? ' · ' + o.department : ''}</div>
+                  <div class="text-muted small">${o.email || ''}</div>
+                </div>
+              </div>
+            `).join('')
+          : '<span class="text-muted">No owners</span>';
+
+        const tagsHtml = (data.tags && data.tags.length)
+          ? data.tags.map(t => `<span class="badge bg-secondary rounded-pill px-3 py-2 me-2 mb-2">${t.name}</span>`).join('')
+          : '<span class="text-muted">No tags</span>';
+
+        const disksRows = (data.disks && data.disks.length)
+          ? data.disks.map(d => `
+              <tr>
+                <td class="text-nowrap">${d.label || ''}</td>
+                <td class="text-end">${(d.size_gb ?? 0).toLocaleString(undefined, { maximumFractionDigits: 1 })} GB</td>
+              </tr>
+            `).join('')
+          : '<tr><td colspan="2" class="text-muted">No disks</td></tr>';
+
+        const nicsRows = (data.nics && data.nics.length)
+          ? data.nics.map(n => `
+              <tr>
+                <td class="text-nowrap">${n.label || ''}</td>
+                <td class="text-nowrap">${n.mac || ''}</td>
+                <td class="text-nowrap">${n.network || ''}</td>
+                <td class="text-nowrap">${(n.ip_addresses && n.ip_addresses.length) ? n.ip_addresses.join('<br>') : ''}</td>
+                <td class="text-center">${n.connected ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>'}</td>
+              </tr>
+            `).join('')
+          : '<tr><td colspan="5" class="text-muted">No network adapters</td></tr>';
+
+        const bodyHtml = `
+          <div class="row g-4">
+            <div class="col-lg-6">
+              <div class="card border-0 h-100">
+                <div class="card-body">
+                  <h6 class="fw-semibold mb-3"><i class="bi bi-info-circle me-2 text-primary"></i>Overview</h6>
+                  <div class="d-flex flex-wrap gap-2 mb-3">${powerBadge}</div>
+                  <div class="row small">
+                    <div class="col-6 mb-2"><span class="text-muted">CPU</span><div class="fw-semibold text-dark">${data.cpu} vCPU</div></div>
+                    <div class="col-6 mb-2"><span class="text-muted">Memory</span><div class="fw-semibold text-dark">${(data.memory_mb/1024).toFixed(1)} GB</div></div>
+                    <div class="col-6 mb-2"><span class="text-muted">OS</span><div class="fw-semibold text-dark">${data.guest_os || ''}</div></div>
+                    <div class="col-6 mb-2"><span class="text-muted">Hypervisor</span><div class="fw-semibold text-dark">${data.hypervisor || ''}</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="card border-0 h-100">
+                <div class="card-body">
+                  <h6 class="fw-semibold mb-3"><i class="bi bi-people me-2 text-primary"></i>Owners</h6>
+                  ${ownersHtml}
+                  <hr class="my-3" />
+                  <h6 class="fw-semibold mb-3"><i class="bi bi-tags me-2 text-primary"></i>Tags</h6>
+                  <div class="d-flex flex-wrap">${tagsHtml}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <div class="card border-0">
+                <div class="card-body">
+                  <h6 class="fw-semibold mb-3"><i class="bi bi-hdd-network me-2 text-primary"></i>Disks</h6>
+                  <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                      <thead class="table-light">
+                        <tr>
+                          <th>Label</th>
+                          <th class="text-end">Size</th>
+                        </tr>
+                      </thead>
+                      <tbody>${disksRows}</tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <div class="card border-0">
+                <div class="card-body">
+                  <h6 class="fw-semibold mb-3"><i class="bi bi-ethernet me-2 text-primary"></i>Network Adapters</h6>
+                  <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                      <thead class="table-light">
+                        <tr>
+                          <th>Label</th>
+                          <th>MAC</th>
+                          <th>Network</th>
+                          <th>IP Addresses</th>
+                          <th class="text-center">Connected</th>
+                        </tr>
+                      </thead>
+                      <tbody>${nicsRows}</tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        $('#vmDetailBody').html(bodyHtml);
+
+        // Wire up Edit button (navigate to edit page if available)
+        $('#editVMBtn')
+          .prop('disabled', false)
+          .off('click')
+          .on('click', function() {
+            window.location.href = `/vms/${vmId}/edit`;
+          });
+      })
+      .catch(err => {
+        $('#vmDetailSubtitle').text('Failed to load VM details');
+        $('#vmDetailBody').html(`
+          <div class="alert alert-danger d-flex align-items-center" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <div>Unable to load VM details: ${err.message}</div>
+          </div>
+        `);
+      });
   };
 
   window.showOwnersModal = function(vmId, vmName) {
     $('#ownersVmId').val(vmId);
     $('#ownersVmName').val(vmName);
-    $('#vmOwnersModal').modal('show');
-    // Add your owners loading logic here
+    const ownersModalEl = document.getElementById('vmOwnersModal');
+    const ownersModal = bootstrap.Modal.getOrCreateInstance(ownersModalEl);
+    ownersModal.show();
+    const container = $('#currentOwners');
+    container.html('<small class="text-muted">Loading...</small>');
+    Promise.all([
+      fetch(`/vms/api/${vmId}`).then(r => r.json()),
+      fetch(`/owners/api`).then(r => r.json())
+    ])
+      .then(([vmData, allOwners]) => {
+        renderOwnersList(vmData.owners || []);
+        renderAvailableOwners(allOwners, vmData.owners || []);
+      })
+      .catch(() => {
+        container.html('<span class="text-muted">Failed to load owners</span>');
+      });
   };
 
   window.showTagsModal = function(vmId, vmName) {
     $('#tagsVmId').val(vmId);
     $('#tagsVmName').val(vmName);
-    $('#vmTagsModal').modal('show');
-    // Add your tags loading logic here
+    const tagsModalEl = document.getElementById('vmTagsModal');
+    const tagsModal = bootstrap.Modal.getOrCreateInstance(tagsModalEl);
+    tagsModal.show();
+    const container = $('#currentTags');
+    container.html('<small class="text-muted">Loading...</small>');
+    Promise.all([
+      fetch(`/vms/api/${vmId}`).then(r => r.json()),
+      fetch(`/tags/api`).then(r => r.json())
+    ])
+    .then(([vmData, allTags]) => {
+      renderTagsList(vmData.tags || []);
+      renderAvailableTags(allTags, vmData.tags || []);
+    })
+    .catch(() => container.html('<span class="text-muted">Failed to load tags</span>'));
+  };
+
+  function renderTagsList(tags) {
+    const container = $('#currentTags');
+    if (!tags || tags.length === 0) {
+      container.html('<span class="text-muted">No tags</span>');
+      return;
+    }
+    const html = tags.map(t => `
+      <span class="badge bg-secondary rounded-pill px-3 py-2 me-2 mb-2" data-tag-name="${t.name}">
+        ${t.name}
+        <button type="button" class="btn btn-sm btn-link text-white p-0 ms-2 align-baseline" title="Unassign tag" onclick="unassignTag('${t.name}')">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </span>
+    `).join('');
+    container.html(html);
+  }
+
+  function renderAvailableTags(allTags, assignedTags) {
+    const container = $('#availableTags');
+    container.empty();
+    const assigned = new Set((assignedTags || []).map(t => (t.name || '').toLowerCase()));
+    const available = (allTags || []).filter(t => !assigned.has((t.name || '').toLowerCase()));
+    if (available.length === 0) {
+      container.html('<span class="text-muted">No unassigned tags available</span>');
+      return;
+    }
+    available.forEach(t => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-outline-primary btn-sm';
+      btn.setAttribute('data-available-tag', t.name || '');
+      btn.innerHTML = `${t.name || ''} <i class="bi bi-plus-lg ms-1"></i>`;
+      btn.addEventListener('click', function() {
+        addTag(t.name || '');
+      });
+      container[0].appendChild(btn);
+    });
+  }
+
+  function addTag(tagName) {
+    if (!tagName) return;
+    const current = new Set(Array.from(document.querySelectorAll('#currentTags [data-tag-name]')).map(el => el.getAttribute('data-tag-name')));
+    if (current.has(tagName)) return;
+    current.add(tagName);
+    // re-render current tags quickly on client
+    renderTagsList(Array.from(current).map(n => ({ name: n })));
+    // Trigger save to persist and refresh lists
+    $('#assignTagsForm').trigger('submit');
+  }
+
+  window.unassignTag = function(tagName) {
+    const vmId = $('#tagsVmId').val();
+    fetch(`/vms/api/${encodeURIComponent(vmId)}/tags/unassign`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: tagName })
+    })
+    .then(async r => {
+      if (!r.ok) {
+        const text = await r.text();
+        throw new Error(`${r.status} ${r.statusText} - ${text.slice(0, 120)}`);
+      }
+      return r.json();
+    })
+    .then(data => {
+      if (data.status === 'ok') {
+        renderTagsList(data.tags || []);
+        return fetch('/tags/api').then(r => r.json()).then(allTags => {
+          renderAvailableTags(allTags, data.tags || []);
+          showToast('success', `Unassigned tag: ${tagName}`);
+        });
+      }
+      showToast('error', data.error || 'Failed to unassign tag');
+    })
+    .catch(err => showToast('error', `Error: ${err.message}`));
+  };
+
+  function renderOwnersList(owners) {
+    const container = $('#currentOwners');
+    if (!owners || owners.length === 0) {
+      container.html('<span class="text-muted">No owners</span>');
+      return;
+    }
+    const html = owners.map(o => `
+      <div class="d-flex align-items-center justify-content-between border rounded-3 p-2 mb-2 bg-white">
+        <div class="d-flex align-items-center">
+          <div class="bg-info rounded-circle d-inline-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px; background: var(--info-gradient) !important;">
+            <i class="bi bi-person text-white"></i>
+          </div>
+          <div>
+            <div class="fw-semibold small">${o.name || o.email}${o.department ? ' · ' + o.department : ''}</div>
+            <div class="text-muted small">${o.email || ''}</div>
+          </div>
+        </div>
+        <div>
+          <button type="button" class="btn btn-outline-danger btn-sm" data-owner-email="${o.email || ''}" onclick="unassignOwner('${o.email || ''}')">
+            <i class="bi bi-x-circle me-1"></i>Unassign
+          </button>
+        </div>
+      </div>
+    `).join('');
+    container.html(html);
+  }
+
+  function parseEmails(input) {
+    if (!input) return [];
+    const parts = input
+      .split(/[,\n\r;]+/)
+      .map(s => s.trim())
+      .filter(Boolean);
+    // de-duplicate
+    return Array.from(new Set(parts));
+  }
+
+  function renderAvailableOwners(allOwners, assignedOwners) {
+    const container = $('#availableOwners');
+    container.empty();
+    const assignedEmails = new Set((assignedOwners || []).map(o => (o.email || '').toLowerCase()));
+    const available = (allOwners || []).filter(o => !assignedEmails.has((o.email || '').toLowerCase()));
+    if (available.length === 0) {
+      container.html('<span class="text-muted">No unassigned owners available</span>');
+      return;
+    }
+    available.forEach(o => {
+      const item = document.createElement('div');
+      item.className = 'd-flex align-items-center justify-content-between border rounded-3 p-2 bg-white';
+      item.innerHTML = `
+        <div class="d-flex align-items-center">
+          <div class="bg-info rounded-circle d-inline-flex align-items-center justify-content-center me-2" style="width: 28px; height: 28px; background: var(--info-gradient) !important;">
+            <i class="bi bi-person text-white"></i>
+          </div>
+          <div>
+            <div class="fw-semibold small">${o.name || o.email}${o.department ? ' · ' + o.department : ''}</div>
+            <div class="text-muted small">${o.email || ''}</div>
+          </div>
+        </div>
+        <div>
+          <button type="button" class="btn btn-outline-primary btn-sm" onclick="assignOwner('${o.email || ''}')"><i class="bi bi-plus-lg me-1"></i>Add</button>
+        </div>
+      `;
+      container[0].appendChild(item);
+    });
+  }
+
+  window.assignOwner = function(email) {
+    const vmId = $('#ownersVmId').val();
+    const current = new Set(Array.from(document.querySelectorAll('#currentOwners [data-owner-email]')).map(el => el.getAttribute('data-owner-email')));
+    if (current.has(email)) return;
+    const emails = [email, ...Array.from(current)];
+    fetch(`/vms/api/${encodeURIComponent(vmId)}/owners`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emails })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === 'ok') {
+        renderOwnersList(data.owners || []);
+        return fetch('/owners/api').then(r => r.json()).then(allOwners => {
+          renderAvailableOwners(allOwners, data.owners || []);
+          showToast('success', 'Owner assigned');
+        });
+      }
+      showToast('error', data.error || 'Failed to assign owner');
+    })
+    .catch(err => showToast('error', `Error assigning owner: ${err.message}`));
+  }
+
+  // Unassign owner with reason prompt
+  window.unassignOwner = function(email) {
+    const vmId = $('#ownersVmId').val();
+    const reason = prompt('Please provide a reason for unassigning this owner:');
+    if (reason === null) return; // cancelled
+    fetch(`/vms/${vmId}/owners/unassign`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, reason })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === 'ok') {
+        renderOwnersList(data.owners || []);
+        // Refresh available owners list as well
+        return fetch('/owners/api').then(r => r.json()).then(allOwners => {
+          populateOwnerSelect(allOwners, data.owners || []);
+          showToast('success', 'Owner unassigned');
+        });
+      }
+      showToast('error', data.error || 'Failed to unassign owner');
+    })
+    .catch(err => showToast('error', `Error: ${err.message}`));
   };
 
   window.powerAction = function(vmId, vmName, action) {
