@@ -6,6 +6,7 @@ from ..models.owner import Owner
 from ..models.tag import Tag
 from .. import db
 from ..utils.audit import log_audit_event
+from sqlalchemy import func
 
 vm_bp = Blueprint('vm', __name__)
 
@@ -159,4 +160,145 @@ def unassign_vm_tag(vm_id: str):
     log_audit_event(action='vm.unassign_tag', entity='vm', entity_id=vm.id, details=f"tag={removed.name}")
     db.session.commit()
     return jsonify({'status': 'ok', 'tags': [ {'id': t.id, 'name': t.name } for t in vm.tags ]})
+
+
+@vm_bp.route('/api/stats')
+@login_required
+def vm_stats():
+    """API endpoint to provide VM statistics for dashboard"""
+    
+    # Total VM count
+    total_vms = VM.query.count()
+    
+    # Power state statistics
+    power_stats = db.session.query(
+        VM.power_state,
+        func.count(VM.id).label('count')
+    ).group_by(VM.power_state).all()
+    
+    # Convert power stats to dictionary
+    power_on = 0
+    power_off = 0
+    for stat in power_stats:
+        if stat.power_state and stat.power_state.lower() in ['poweredon', 'powered on', 'running']:
+            power_on = stat.count
+        elif stat.power_state and stat.power_state.lower() in ['poweredoff', 'powered off', 'stopped']:
+            power_off = stat.count
+    
+    # OS statistics
+    os_stats = db.session.query(
+        VM.guest_os,
+        VM.power_state,
+        func.count(VM.id).label('count')
+    ).group_by(VM.guest_os, VM.power_state).all()
+    
+    # Categorize OS types and count by power state
+    windows_total = 0
+    windows_on = 0
+    windows_off = 0
+    linux_total = 0
+    linux_on = 0
+    linux_off = 0
+    other_total = 0
+    other_on = 0
+    other_off = 0
+    
+    for stat in os_stats:
+        guest_os = stat.guest_os or ''
+        power_state = stat.power_state or ''
+        count = stat.count
+        
+        # Categorize OS
+        is_windows = 'windows' in guest_os.lower()
+        is_linux = any(os_type in guest_os.lower() for os_type in ['linux', 'ubuntu', 'centos', 'redhat', 'debian', 'fedora'])
+        
+        # Categorize power state
+        is_on = power_state.lower() in ['poweredon', 'powered on', 'running']
+        is_off = power_state.lower() in ['poweredoff', 'powered off', 'stopped']
+        
+        if is_windows:
+            windows_total += count
+            if is_on:
+                windows_on += count
+            elif is_off:
+                windows_off += count
+        elif is_linux:
+            linux_total += count
+            if is_on:
+                linux_on += count
+            elif is_off:
+                linux_off += count
+        else:
+            other_total += count
+            if is_on:
+                other_on += count
+            elif is_off:
+                other_off += count
+    
+    # Additional metrics
+    from ..models.owner import Owner
+    from ..models.tag import Tag
+    from ..models.vcenter import VCenterConfig
+    
+    # Calculate average CPU and memory
+    avg_cpu = db.session.query(func.avg(VM.cpu)).scalar() or 0
+    avg_memory_mb = db.session.query(func.avg(VM.memory_mb)).scalar() or 0
+    avg_memory_gb = avg_memory_mb / 1024 if avg_memory_mb else 0
+    
+    # Count unique hypervisors from VM records (excluding null/empty values)
+    unique_hypervisors = db.session.query(func.count(func.distinct(VM.hypervisor)))\
+        .filter(VM.hypervisor.isnot(None), VM.hypervisor != '').scalar() or 0
+    
+    # Get hypervisor breakdown (hypervisor name -> VM count)
+    hypervisor_stats = db.session.query(
+        VM.hypervisor,
+        func.count(VM.id).label('vm_count')
+    ).filter(VM.hypervisor.isnot(None), VM.hypervisor != '')\
+     .group_by(VM.hypervisor)\
+     .order_by(func.count(VM.id).desc())\
+     .limit(10).all()
+    
+    hypervisor_breakdown = [
+        {'hypervisor': stat.hypervisor, 'vm_count': stat.vm_count}
+        for stat in hypervisor_stats
+    ]
+    
+    # Count active owners and tags
+    total_owners = Owner.query.count()
+    total_tags = Tag.query.count()
+    total_hypervisors = VCenterConfig.query.filter_by(enabled=True).count()
+    
+    return jsonify({
+        'total_vms': total_vms,
+        'power_stats': {
+            'powered_on': power_on,
+            'powered_off': power_off
+        },
+        'os_breakdown': {
+            'windows': {
+                'total': windows_total,
+                'powered_on': windows_on,
+                'powered_off': windows_off
+            },
+            'linux': {
+                'total': linux_total,
+                'powered_on': linux_on,
+                'powered_off': linux_off
+            },
+            'other': {
+                'total': other_total,
+                'powered_on': other_on,
+                'powered_off': other_off
+            }
+        },
+        'additional_metrics': {
+            'avg_cpu': round(avg_cpu, 1),
+            'avg_memory_gb': round(avg_memory_gb, 1),
+            'total_owners': total_owners,
+            'total_tags': total_tags,
+            'total_hypervisors': total_hypervisors,
+            'unique_hypervisors': unique_hypervisors
+        },
+        'hypervisor_breakdown': hypervisor_breakdown
+    })
 

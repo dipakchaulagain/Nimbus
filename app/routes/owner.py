@@ -20,7 +20,13 @@ def list_owners():
 def owners_api_list():
     owners = Owner.query.order_by(Owner.name.asc()).all()
     return jsonify([
-        { 'id': o.id, 'name': o.name, 'email': o.email, 'department': o.department }
+        { 
+            'id': o.id, 
+            'name': o.name, 
+            'email': o.email, 
+            'department': o.department,
+            'vm_count': len(o.vms)
+        }
         for o in owners
     ])
 
@@ -68,4 +74,25 @@ def owners_api_delete(owner_id: int):
     log_audit_event(action='owner.delete', entity='owner', entity_id=oid, details=f"name={oname}, email={oemail}")
     db.session.commit()
     return jsonify({'status': 'deleted'})
+
+
+@owner_bp.route('/api/<int:owner_id>/vms')
+@login_required
+def owner_vms(owner_id: int):
+    """API endpoint to get VMs assigned to a specific owner"""
+    owner = Owner.query.get_or_404(owner_id)
+    return jsonify([
+        {
+            'id': vm.id,
+            'name': vm.name,
+            'cpu': vm.cpu,
+            'memory_mb': vm.memory_mb,
+            'guest_os': vm.guest_os,
+            'power_state': vm.power_state,
+            'hypervisor': vm.hypervisor,
+            'created_at': vm.created_at.isoformat() if vm.created_at else None,
+            'updated_at': vm.updated_at.isoformat() if vm.updated_at else None,
+        }
+        for vm in owner.vms
+    ])
 

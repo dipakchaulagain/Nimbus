@@ -46,3 +46,24 @@ def audit_api():
     ])
 
 
+@audit_bp.route('/api/recent')
+@login_required
+def recent_audit_logs():
+    """API endpoint for recent audit logs (dashboard use)"""
+    limit = request.args.get('limit', 10, type=int)
+    logs = AuditLog.query.order_by(AuditLog.occurred_at.desc()).limit(limit).all()
+    return jsonify([
+        {
+            'id': log.id,
+            'timestamp': log.occurred_at.isoformat() if log.occurred_at else None,
+            'user_id': log.user_id,
+            'username': log.username,
+            'action': log.action,
+            'entity': log.entity,
+            'entity_id': log.entity_id,
+            'details': log.details,
+        }
+        for log in logs
+    ])
+
+

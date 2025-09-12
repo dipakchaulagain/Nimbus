@@ -130,6 +130,9 @@
             <th class="border-0 fw-semibold text-dark">
               <i class="bi bi-building me-2"></i>Department
             </th>
+            <th class="border-0 fw-semibold text-dark text-center">
+              <i class="bi bi-hdd-network me-2"></i>VMs
+            </th>
             {% if current_user.role in ['editor', 'superadmin'] %}
             <th class="border-0 fw-semibold text-dark text-center">
               <i class="bi bi-gear me-2"></i>Actions
@@ -168,9 +171,23 @@
                 </span>
               {% endif %}
             </td>
+            <td class="py-3 text-center">
+              <div class="d-flex align-items-center justify-content-center">
+                <div class="bg-primary rounded-3 d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; background: var(--primary-gradient) !important;">
+                  <i class="bi bi-hdd-network text-white"></i>
+                </div>
+                <div class="text-center">
+                  <div class="fw-bold fs-6 text-primary" id="vm_count">{{ o.vms|length }}</div>
+                  <small class="text-muted">VMs</small>
+                </div>
+              </div>
+            </td>
             {% if current_user.role in ['editor', 'superadmin'] %}
             <td class="py-3 text-center">
               <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-info" data-action="view-vms" title="View Assigned VMs">
+                  <i class="bi bi-eye"></i>
+                </button>
                 <button class="btn btn-outline-primary" data-action="edit" title="Edit Owner">
                   <i class="bi bi-pencil"></i>
                 </button>
@@ -178,6 +195,12 @@
                   <i class="bi bi-trash"></i>
                 </button>
               </div>
+            </td>
+            {% else %}
+            <td class="py-3 text-center">
+              <button class="btn btn-outline-info btn-sm" data-action="view-vms" title="View Assigned VMs">
+                <i class="bi bi-eye me-1"></i>View VMs
+              </button>
             </td>
             {% endif %}
           </tr>
@@ -237,6 +260,52 @@
         <button class="btn btn-primary btn-lg" id="saveOwnerBtn">
           <i class="bi bi-check-lg me-2"></i>Save Owner
         </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- View VMs Modal -->
+<div class="modal fade" id="viewVMsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-bottom-0 pb-0">
+        <div class="d-flex align-items-center">
+          <div class="bg-info rounded-3 p-2 me-3" style="background: var(--info-gradient) !important;">
+            <i class="bi bi-hdd-network text-white"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-bold" id="viewVMsModalTitle">Assigned Virtual Machines</h5>
+            <small class="text-muted" id="viewVMsOwnerInfo">Loading...</small>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <div id="vmsLoading" class="text-center py-4">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="text-muted mt-2">Loading assigned VMs...</p>
+        </div>
+        <div id="vmsContent" style="display: none;">
+          <div id="vmsTableContainer" class="table-responsive">
+            <!-- VMs table will be populated here -->
+          </div>
+        </div>
+        <div id="vmsEmpty" class="text-center py-4" style="display: none;">
+          <i class="bi bi-hdd display-4 text-muted mb-3"></i>
+          <h6 class="text-muted">No VMs Assigned</h6>
+          <small class="text-muted">This owner doesn't have any virtual machines assigned yet.</small>
+        </div>
+      </div>
+      <div class="modal-footer border-top-0 pt-0">
+        <button class="btn btn-outline-secondary btn-lg" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg me-2"></i>Close
+        </button>
+        <a href="/vms/" class="btn btn-primary btn-lg" id="goToVMsBtn">
+          <i class="bi bi-arrow-right me-2"></i>Go to VMs
+        </a>
       </div>
     </div>
   </div>
@@ -313,6 +382,7 @@
     // Initialize modals
     const modal = new bootstrap.Modal(document.getElementById('ownerModal'));
     const deleteModal = new bootstrap.Modal(document.getElementById('deleteOwnerModal'));
+    const viewVMsModal = new bootstrap.Modal(document.getElementById('viewVMsModal'));
 
     // Add Owner Button
     $('#addOwnerBtn').on('click', function(){
@@ -323,6 +393,125 @@
       modal.show();
       // Focus on name input
       setTimeout(() => $('#ownerName').focus(), 300);
+    });
+
+    // View VMs Button
+    $(document).on('click', '[data-action="view-vms"]', async function(){
+      const tr = $(this).closest('tr');
+      const ownerId = tr.data('id');
+      const ownerName = tr.find('td').eq(0).find('#owner_name').text().trim();
+      const ownerEmail = tr.find('td').eq(1).find('#owner_email').text().trim();
+      const ownerDepartment = tr.find('td').eq(2).find('#owner_department').text().trim();
+      const vmCount = tr.find('td').eq(3).find('#vm_count').text().trim();
+      
+      // Update modal header
+      $('#viewVMsModalTitle').text(`VMs Assigned to ${ownerName}`);
+      $('#viewVMsOwnerInfo').text(`${ownerEmail} • ${ownerDepartment === 'Unassigned' ? 'No department' : ownerDepartment} • ${vmCount} VMs`);
+      
+      // Show loading state
+      $('#vmsLoading').show();
+      $('#vmsContent').hide();
+      $('#vmsEmpty').hide();
+      
+      viewVMsModal.show();
+      
+      try {
+        const response = await fetch(`/owners/api/${ownerId}/vms`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch VMs');
+        }
+        
+        const vms = await response.json();
+        
+        if (vms.length === 0) {
+          $('#vmsLoading').hide();
+          $('#vmsEmpty').show();
+        } else {
+          // Populate VMs table
+          let tableHtml = `
+            <table class="table table-hover align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th class="border-0 fw-semibold text-dark">
+                    <i class="bi bi-hdd-network me-2"></i>VM Name
+                  </th>
+                  <th class="border-0 fw-semibold text-dark">
+                    <i class="bi bi-cpu me-2"></i>CPU
+                  </th>
+                  <th class="border-0 fw-semibold text-dark">
+                    <i class="bi bi-memory me-2"></i>Memory
+                  </th>
+                  <th class="border-0 fw-semibold text-dark">
+                    <i class="bi bi-window me-2"></i>OS
+                  </th>
+                  <th class="border-0 fw-semibold text-dark">
+                    <i class="bi bi-power me-2"></i>Status
+                  </th>
+                  <th class="border-0 fw-semibold text-dark">
+                    <i class="bi bi-server me-2"></i>Hypervisor
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+          
+          vms.forEach(vm => {
+            const statusClass = vm.power_state && vm.power_state.toLowerCase().includes('power') && vm.power_state.toLowerCase().includes('on') 
+              ? 'text-success' : 'text-secondary';
+            const statusIcon = vm.power_state && vm.power_state.toLowerCase().includes('power') && vm.power_state.toLowerCase().includes('on')
+              ? 'bi-toggle-on' : 'bi-toggle-off';
+            
+            tableHtml += `
+              <tr>
+                <td class="py-3">
+                  <div class="fw-semibold">${vm.name}</div>
+                  <small class="text-muted">${vm.id}</small>
+                </td>
+                <td class="py-3">
+                  <span class="badge bg-primary rounded-pill px-3 py-2">
+                    ${vm.cpu || 0} cores
+                  </span>
+                </td>
+                <td class="py-3">
+                  <span class="badge bg-info rounded-pill px-3 py-2">
+                    ${Math.round((vm.memory_mb || 0) / 1024)} GB
+                  </span>
+                </td>
+                <td class="py-3">
+                  <small class="text-muted">${vm.guest_os || 'Unknown'}</small>
+                </td>
+                <td class="py-3">
+                  <i class="bi ${statusIcon} ${statusClass} me-1"></i>
+                  <small class="${statusClass}">${vm.power_state || 'Unknown'}</small>
+                </td>
+                <td class="py-3">
+                  <small class="text-muted">${vm.hypervisor || 'Unknown'}</small>
+                </td>
+              </tr>
+            `;
+          });
+          
+          tableHtml += `
+              </tbody>
+            </table>
+          `;
+          
+          $('#vmsTableContainer').html(tableHtml);
+          $('#vmsLoading').hide();
+          $('#vmsContent').show();
+        }
+        
+      } catch (error) {
+        console.error('Error loading VMs:', error);
+        $('#vmsLoading').hide();
+        $('#vmsContent').html(`
+          <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            Failed to load assigned VMs. Please try again.
+          </div>
+        `);
+        $('#vmsContent').show();
+      }
     });
 
     // Edit Owner Button

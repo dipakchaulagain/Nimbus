@@ -494,10 +494,15 @@
         <form id="assignOwnersForm">
           <input type="hidden" name="vm_id" id="ownersVmId" />
           <div class="mb-4">
-            <label class="form-label fw-semibold text-dark mb-2">
-              <i class="bi bi-tag me-2 text-primary"></i>VM Name
-            </label>
-            <input type="text" class="form-control form-control-lg border-2" id="ownersVmName" readonly>
+            <div class="d-flex align-items-center mb-3">
+              <div class="bg-primary rounded-3 p-2 me-3" style="background: var(--primary-gradient) !important;">
+                <i class="bi bi-display text-white"></i>
+              </div>
+              <div>
+                <h6 class="mb-1 fw-bold text-dark" id="ownersVmName">Loading...</h6>
+                <small class="text-muted">Virtual Machine</small>
+              </div>
+            </div>
           </div>
           <div class="mb-4">
             <label class="form-label fw-semibold text-dark mb-2">
@@ -539,10 +544,15 @@
         <form id="assignTagsForm">
           <input type="hidden" name="vm_id" id="tagsVmId" />
           <div class="mb-4">
-            <label class="form-label fw-semibold text-dark mb-2">
-              <i class="bi bi-tag me-2 text-primary"></i>VM Name
-            </label>
-            <input type="text" class="form-control form-control-lg border-2" id="tagsVmName" readonly>
+            <div class="d-flex align-items-center mb-3">
+              <div class="bg-primary rounded-3 p-2 me-3" style="background: var(--primary-gradient) !important;">
+                <i class="bi bi-display text-white"></i>
+              </div>
+              <div>
+                <h6 class="mb-1 fw-bold text-dark" id="tagsVmName">Loading...</h6>
+                <small class="text-muted">Virtual Machine</small>
+              </div>
+            </div>
           </div>
           <div class="mb-4">
             <label class="form-label fw-semibold text-dark mb-2">
@@ -985,7 +995,7 @@ $(function(){
 
   window.showOwnersModal = function(vmId, vmName) {
     $('#ownersVmId').val(vmId);
-    $('#ownersVmName').val(vmName);
+    $('#ownersVmName').text(vmName || 'Loading...');
     const ownersModalEl = document.getElementById('vmOwnersModal');
     const ownersModal = bootstrap.Modal.getOrCreateInstance(ownersModalEl);
     ownersModal.show();
@@ -1006,7 +1016,7 @@ $(function(){
 
   window.showTagsModal = function(vmId, vmName) {
     $('#tagsVmId').val(vmId);
-    $('#tagsVmName').val(vmName);
+    $('#tagsVmName').text(vmName || 'Loading...');
     const tagsModalEl = document.getElementById('vmTagsModal');
     const tagsModal = bootstrap.Modal.getOrCreateInstance(tagsModalEl);
     tagsModal.show();

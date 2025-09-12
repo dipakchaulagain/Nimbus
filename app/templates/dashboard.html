@@ -46,15 +46,15 @@
             </div>
           </div>
           <div class="ms-3 flex-grow-1">
-            <div class="fw-bold fs-5 counter" data-target="{{ total_vms }}">0</div>
+            <div class="fw-bold fs-5 counter" id="total-vms" data-target="0">0</div>
             <div class="text-muted small">Total VMs</div>
           </div>
         </div>
         <div class="d-flex align-items-center mt-3">
           <span class="badge rounded-pill px-3 py-2" style="background: var(--success-gradient); color: white;">
-            <i class="bi bi-arrow-up small me-1"></i>+5.2%
+            <i class="bi bi-arrow-up small me-1"></i>Live Data
           </span>
-          <small class="text-muted ms-2">vs last month</small>
+          <small class="text-muted ms-2">Real-time stats</small>
         </div>
       </div>
     </div>
@@ -70,15 +70,15 @@
             </div>
           </div>
           <div class="ms-3 flex-grow-1">
-            <div class="fw-bold fs-5 counter" data-target="{{ powered_on }}">0</div>
+            <div class="fw-bold fs-5 counter" id="powered-on" data-target="0">0</div>
             <div class="text-muted small">Powered On</div>
           </div>
         </div>
         <div class="d-flex align-items-center mt-3">
           <div class="progress flex-grow-1 me-2" style="height: 6px;">
-            <div class="progress-bar" style="background: var(--success-gradient); width: {{ (powered_on / total_vms * 100) if total_vms > 0 else 0 }}%"></div>
+            <div class="progress-bar" id="powered-on-progress" style="background: var(--success-gradient); width: 0%"></div>
           </div>
-          <small class="text-muted">{{ "%.1f"|format((powered_on / total_vms * 100) if total_vms > 0 else 0) }}%</small>
+          <small class="text-muted" id="powered-on-percentage">0%</small>
         </div>
       </div>
     </div>
@@ -94,15 +94,15 @@
             </div>
           </div>
           <div class="ms-3 flex-grow-1">
-            <div class="fw-bold fs-5 counter" data-target="{{ powered_off }}">0</div>
+            <div class="fw-bold fs-5 counter" id="powered-off" data-target="0">0</div>
             <div class="text-muted small">Powered Off</div>
           </div>
         </div>
         <div class="d-flex align-items-center mt-3">
           <div class="progress flex-grow-1 me-2" style="height: 6px;">
-            <div class="progress-bar bg-secondary" style="width: {{ (powered_off / total_vms * 100) if total_vms > 0 else 0 }}%"></div>
+            <div class="progress-bar bg-secondary" id="powered-off-progress" style="width: 0%"></div>
           </div>
-          <small class="text-muted">{{ "%.1f"|format((powered_off / total_vms * 100) if total_vms > 0 else 0) }}%</small>
+          <small class="text-muted" id="powered-off-percentage">0%</small>
         </div>
       </div>
     </div>
@@ -113,20 +113,138 @@
       <div class="card-body">
         <div class="d-flex align-items-center">
           <div class="flex-shrink-0">
-            <div class="bg-warning rounded-3 p-2" style="background: var(--warning-gradient) !important;">
-              <i class="bi bi-exclamation-triangle text-white"></i>
+            <div class="bg-info rounded-3 p-2" style="background: var(--info-gradient) !important;">
+              <i class="bi bi-server text-white"></i>
             </div>
           </div>
           <div class="ms-3 flex-grow-1">
-            <div class="fw-bold fs-5">3</div>
-            <div class="text-muted small">Active Alerts</div>
+            <div class="fw-bold fs-5 counter" id="total-hypervisors" data-target="0">0</div>
+            <div class="text-muted small">Hypervisors</div>
           </div>
         </div>
         <div class="d-flex align-items-center mt-3">
-          <span class="badge rounded-pill px-3 py-2" style="background: var(--danger-gradient); color: white;">
-            <i class="bi bi-exclamation-circle small me-1"></i>Urgent
+          <span class="badge rounded-pill px-3 py-2" style="background: var(--info-gradient); color: white;">
+            <i class="bi bi-check-circle small me-1"></i>Connected
           </span>
-          <small class="text-muted ms-2">Needs attention</small>
+          <small class="text-muted ms-2">vCenter systems</small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- OS Breakdown Statistics -->
+<div class="row mb-5">
+  <div class="col-12">
+    <div class="card border-0">
+      <div class="card-header bg-white border-bottom-0 py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="mb-1 fw-semibold">
+              <i class="bi bi-pie-chart me-2 text-primary"></i>
+              VM Operating System Breakdown
+            </h5>
+            <small class="text-muted">Distribution by OS type and power state</small>
+          </div>
+          <div class="dropdown">
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown">
+              <i class="bi bi-three-dots"></i>
+            </button>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="#" onclick="refreshVMStats()"><i class="bi bi-arrow-clockwise me-2"></i>Refresh</a></li>
+              <li><a class="dropdown-item" href="/vms/"><i class="bi bi-eye me-2"></i>View All VMs</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row g-4">
+          <!-- Windows VMs -->
+          <div class="col-lg-4 col-md-6">
+            <div class="os-stat-card p-4 rounded-3 h-100" style="background: linear-gradient(135deg, rgba(0, 123, 255, 0.1) 0%, rgba(0, 123, 255, 0.05) 100%); border-left: 4px solid #007bff;">
+              <div class="d-flex align-items-center mb-3">
+                <div class="bg-primary rounded-3 d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                  <i class="bi bi-windows text-white fs-4"></i>
+                </div>
+                <div>
+                  <h6 class="mb-1 fw-bold">Windows</h6>
+                  <div class="fw-bold fs-4 text-primary" id="windows-total">0</div>
+                </div>
+              </div>
+              <div class="row text-center">
+                <div class="col-6">
+                  <div class="fw-bold text-success" id="windows-on">0</div>
+                  <small class="text-muted">Powered On</small>
+                </div>
+                <div class="col-6">
+                  <div class="fw-bold text-secondary" id="windows-off">0</div>
+                  <small class="text-muted">Powered Off</small>
+                </div>
+              </div>
+              <div class="progress mt-3" style="height: 6px;">
+                <div class="progress-bar bg-success" id="windows-on-bar" style="width: 0%"></div>
+                <div class="progress-bar bg-secondary" id="windows-off-bar" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Linux VMs -->
+          <div class="col-lg-4 col-md-6">
+            <div class="os-stat-card p-4 rounded-3 h-100" style="background: linear-gradient(135deg, rgba(40, 167, 69, 0.1) 0%, rgba(40, 167, 69, 0.05) 100%); border-left: 4px solid #28a745;">
+              <div class="d-flex align-items-center mb-3">
+                <div class="bg-success rounded-3 d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                  <i class="bi bi-terminal text-white fs-4"></i>
+                </div>
+                <div>
+                  <h6 class="mb-1 fw-bold">Linux</h6>
+                  <div class="fw-bold fs-4 text-success" id="linux-total">0</div>
+                </div>
+              </div>
+              <div class="row text-center">
+                <div class="col-6">
+                  <div class="fw-bold text-success" id="linux-on">0</div>
+                  <small class="text-muted">Powered On</small>
+                </div>
+                <div class="col-6">
+                  <div class="fw-bold text-secondary" id="linux-off">0</div>
+                  <small class="text-muted">Powered Off</small>
+                </div>
+              </div>
+              <div class="progress mt-3" style="height: 6px;">
+                <div class="progress-bar bg-success" id="linux-on-bar" style="width: 0%"></div>
+                <div class="progress-bar bg-secondary" id="linux-off-bar" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Other OS VMs -->
+          <div class="col-lg-4 col-md-6">
+            <div class="os-stat-card p-4 rounded-3 h-100" style="background: linear-gradient(135deg, rgba(108, 117, 125, 0.1) 0%, rgba(108, 117, 125, 0.05) 100%); border-left: 4px solid #6c757d;">
+              <div class="d-flex align-items-center mb-3">
+                <div class="bg-secondary rounded-3 d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                  <i class="bi bi-question-circle text-white fs-4"></i>
+                </div>
+                <div>
+                  <h6 class="mb-1 fw-bold">Other</h6>
+                  <div class="fw-bold fs-4 text-secondary" id="other-total">0</div>
+                </div>
+              </div>
+              <div class="row text-center">
+                <div class="col-6">
+                  <div class="fw-bold text-success" id="other-on">0</div>
+                  <small class="text-muted">Powered On</small>
+                </div>
+                <div class="col-6">
+                  <div class="fw-bold text-secondary" id="other-off">0</div>
+                  <small class="text-muted">Powered Off</small>
+                </div>
+              </div>
+              <div class="progress mt-3" style="height: 6px;">
+                <div class="progress-bar bg-success" id="other-on-bar" style="width: 0%"></div>
+                <div class="progress-bar bg-secondary" id="other-off-bar" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -214,84 +332,52 @@
     </div>
   </div>
 
-  <!-- Enhanced System Health Card -->
+  <!-- VM Management Summary Card -->
   <div class="col-lg-6">
     <div class="card border-0 h-100">
       <div class="card-header bg-white border-bottom-0 py-3">
         <div class="d-flex justify-content-between align-items-center">
           <div>
             <h5 class="mb-1 fw-semibold">
-              <i class="bi bi-heart-pulse me-2 text-primary"></i>
-              System Health
+              <i class="bi bi-graph-up me-2 text-primary"></i>
+              VM Management Summary
             </h5>
-            <small class="text-muted">Real-time infrastructure status</small>
+            <small class="text-muted">Overview of VM operations</small>
           </div>
           <span class="badge rounded-pill px-3 py-2" style="background: var(--success-gradient); color: white;">
-            <i class="bi bi-check-circle me-1"></i>All Systems Operational
+            <i class="bi bi-check-circle me-1"></i>System Healthy
           </span>
         </div>
       </div>
       <div class="card-body">
-        <div class="health-metrics">
-          <!-- CPU Usage -->
-          <div class="d-flex justify-content-between align-items-center mb-4">
-            <div class="d-flex align-items-center">
-              <div class="bg-primary rounded-3 d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; background: var(--primary-gradient) !important;">
-                <i class="bi bi-cpu text-white"></i>
+        <div class="row g-3">
+          <div class="col-6">
+            <div class="text-center p-3 rounded-3" style="background: rgba(40, 167, 69, 0.1);">
+              <div class="fw-bold fs-4 text-success" id="avg-cpu">0</div>
+              <small class="text-muted">Avg CPU Cores</small>
               </div>
-              <div>
-                <h6 class="mb-1 fw-semibold">CPU Usage</h6>
-                <small class="text-muted">Average across all VMs</small>
               </div>
+          <div class="col-6">
+            <div class="text-center p-3 rounded-3" style="background: rgba(0, 123, 255, 0.1);">
+              <div class="fw-bold fs-4 text-primary" id="avg-memory">0</div>
+              <small class="text-muted">Avg Memory (GB)</small>
             </div>
-            <div class="text-end">
-              <div class="fw-bold fs-5 text-success mb-1">32%</div>
-              <div class="progress" style="width: 80px; height: 6px;">
-                <div class="progress-bar" style="background: var(--success-gradient); width: 32%"></div>
+              </div>
+          <div class="col-6">
+            <div class="text-center p-3 rounded-3" style="background: rgba(255, 193, 7, 0.1);">
+              <div class="fw-bold fs-4 text-warning" id="total-owners">0</div>
+              <small class="text-muted">Active Owners</small>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="text-center p-3 rounded-3" style="background: rgba(108, 117, 125, 0.1);">
+              <div class="fw-bold fs-4 text-secondary" id="total-tags">0</div>
+              <small class="text-muted">VM Tags</small>
               </div>
             </div>
           </div>
           
-          <!-- Memory Usage -->
-          <div class="d-flex justify-content-between align-items-center mb-4">
-            <div class="d-flex align-items-center">
-              <div class="bg-info rounded-3 d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; background: var(--info-gradient) !important;">
-                <i class="bi bi-memory text-white"></i>
-              </div>
-              <div>
-                <h6 class="mb-1 fw-semibold">Memory Usage</h6>
-                <small class="text-muted">RAM utilization</small>
-              </div>
-            </div>
-            <div class="text-end">
-              <div class="fw-bold fs-5 text-warning mb-1">68%</div>
-              <div class="progress" style="width: 80px; height: 6px;">
-                <div class="progress-bar" style="background: var(--warning-gradient); width: 68%"></div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Storage Usage -->
-          <div class="d-flex justify-content-between align-items-center mb-4">
-            <div class="d-flex align-items-center">
-              <div class="bg-secondary rounded-3 d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
-                <i class="bi bi-hdd text-white"></i>
-              </div>
-              <div>
-                <h6 class="mb-1 fw-semibold">Storage Usage</h6>
-                <small class="text-muted">Disk space utilization</small>
-              </div>
-            </div>
-            <div class="text-end">
-              <div class="fw-bold fs-5 text-success mb-1">45%</div>
-              <div class="progress" style="width: 80px; height: 6px;">
-                <div class="progress-bar" style="background: var(--success-gradient); width: 45%"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="border-top pt-3">
+        <div class="border-top pt-3 mt-3">
           <div class="d-flex justify-content-between align-items-center">
             <small class="text-muted">
               <i class="bi bi-clock me-1"></i>Last updated:
@@ -304,149 +390,39 @@
   </div>
 </div>
 
-<!-- Enhanced Recent Activity & Alerts -->
+<!-- Recent Audit Logs -->
 <div class="row g-4 mt-2">
-  <div class="col-lg-8">
+  <div class="col-12">
     <div class="card border-0">
       <div class="card-header bg-white border-bottom-0 py-3">
         <div class="d-flex justify-content-between align-items-center">
           <div>
             <h5 class="mb-1 fw-semibold">
-              <i class="bi bi-activity me-2 text-primary"></i>
+              <i class="bi bi-clock-history me-2 text-primary"></i>
               Recent Activity
             </h5>
-            <small class="text-muted">Latest changes and events</small>
+            <small class="text-muted">Latest audit logs and system events</small>
           </div>
-          <a href="/activity/" class="btn btn-outline-primary btn-lg">
-            <i class="bi bi-eye me-2"></i>View All
+          <a href="/audit/" class="btn btn-outline-primary btn-lg">
+            <i class="bi bi-eye me-2"></i>View All Logs
           </a>
         </div>
       </div>
       <div class="card-body">
-        <div class="activity-feed">
-          <div class="activity-item d-flex align-items-start">
-            <div class="bg-success rounded-3 d-flex align-items-center justify-content-center me-3" style="width: 36px; height: 36px; background: var(--success-gradient) !important;">
-              <i class="bi bi-check-circle text-white"></i>
+        <div id="audit-feed" class="audit-feed">
+          <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
             </div>
-            <div class="flex-grow-1">
-              <div class="d-flex justify-content-between align-items-start mb-1">
-                <p class="mb-1 fw-medium">VM web-server-01 was powered on successfully</p>
-                <small class="text-muted">2 min ago</small>
-              </div>
-              <small class="text-muted">Virtual machine started without errors</small>
-            </div>
-          </div>
-          
-          <div class="activity-item d-flex align-items-start">
-            <div class="bg-info rounded-3 d-flex align-items-center justify-content-center me-3" style="width: 36px; height: 36px; background: var(--info-gradient) !important;">
-              <i class="bi bi-info-circle text-white"></i>
-            </div>
-            <div class="flex-grow-1">
-              <div class="d-flex justify-content-between align-items-start mb-1">
-                <p class="mb-1 fw-medium">New VM db-server-03 added to inventory</p>
-                <small class="text-muted">15 min ago</small>
-              </div>
-              <small class="text-muted">Discovered via vCenter synchronization</small>
-            </div>
-          </div>
-          
-          <div class="activity-item d-flex align-items-start">
-            <div class="bg-warning rounded-3 d-flex align-items-center justify-content-center me-3" style="width: 36px; height: 36px; background: var(--warning-gradient) !important;">
-              <i class="bi bi-exclamation-triangle text-white"></i>
-            </div>
-            <div class="flex-grow-1">
-              <div class="d-flex justify-content-between align-items-start mb-1">
-                <p class="mb-1 fw-medium">Memory alert on vm-prod-02 (85% usage)</p>
-                <small class="text-muted">1 hr ago</small>
-              </div>
-              <small class="text-muted">Threshold exceeded, consider scaling resources</small>
-            </div>
-          </div>
-          
-          <div class="activity-item d-flex align-items-start">
-            <div class="bg-secondary rounded-3 d-flex align-items-center justify-content-center me-3" style="width: 36px; height: 36px;">
-              <i class="bi bi-power text-white"></i>
-            </div>
-            <div class="flex-grow-1">
-              <div class="d-flex justify-content-between align-items-start mb-1">
-                <p class="mb-1 fw-medium">VM backup-server was powered off for maintenance</p>
-                <small class="text-muted">3 hr ago</small>
-              </div>
-              <small class="text-muted">Scheduled maintenance window</small>
-            </div>
+            <p class="text-muted mt-2">Loading recent activity...</p>
           </div>
         </div>
         
         <div class="text-center mt-4 pt-3 border-top">
           <small class="text-muted">
             <i class="bi bi-arrow-clockwise me-1"></i>
-            Activity feed updates every 30 seconds
+            Activity feed updates every 5 minutes
           </small>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <div class="col-lg-4">
-    <div class="card border-0">
-      <div class="card-header bg-white border-bottom-0 py-3">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h5 class="mb-1 fw-semibold">
-              <i class="bi bi-bell me-2 text-primary"></i>
-              Active Alerts
-            </h5>
-            <small class="text-muted">Issues requiring attention</small>
-          </div>
-          <span class="badge rounded-pill px-3 py-2" style="background: var(--warning-gradient); color: white;">3</span>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="alert-list">
-          <div class="alert alert-warning border-0 py-3 px-3 mb-3" style="background: rgba(255, 193, 7, 0.1);">
-            <div class="d-flex align-items-center">
-              <i class="bi bi-exclamation-triangle text-warning me-3"></i>
-              <div class="flex-grow-1">
-                <div class="fw-semibold">High Memory Usage</div>
-                <small class="text-muted">vm-prod-02 • 85% utilization</small>
-              </div>
-              <button class="btn btn-sm btn-outline-warning" onclick="dismissAlert(this)">
-                <i class="bi bi-x"></i>
-              </button>
-            </div>
-          </div>
-          
-          <div class="alert alert-danger border-0 py-3 px-3 mb-3" style="background: rgba(220, 53, 69, 0.1);">
-            <div class="d-flex align-items-center">
-              <i class="bi bi-exclamation-circle text-danger me-3"></i>
-              <div class="flex-grow-1">
-                <div class="fw-semibold">VM Unreachable</div>
-                <small class="text-muted">test-server-01 • Connection failed</small>
-              </div>
-              <button class="btn btn-sm btn-outline-danger" onclick="dismissAlert(this)">
-                <i class="bi bi-x"></i>
-              </button>
-            </div>
-          </div>
-          
-          <div class="alert alert-info border-0 py-3 px-3 mb-3" style="background: rgba(13, 202, 240, 0.1);">
-            <div class="d-flex align-items-center">
-              <i class="bi bi-info-circle text-info me-3"></i>
-              <div class="flex-grow-1">
-                <div class="fw-semibold">Backup Scheduled</div>
-                <small class="text-muted">Starting in 2 hours</small>
-              </div>
-              <button class="btn btn-sm btn-outline-info" onclick="dismissAlert(this)">
-                <i class="bi bi-x"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        <div class="text-center">
-          <a href="/alerts/" class="btn btn-outline-secondary btn-lg w-100">
-            <i class="bi bi-bell me-2"></i>Manage Alerts
-          </a>
         </div>
       </div>
     </div>
@@ -589,30 +565,139 @@
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
+
+  .os-stat-card {
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .os-stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  }
+
+  .os-stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s;
+  }
+
+  .os-stat-card:hover::before {
+    left: 100%;
+  }
 </style>
 {% endblock %}
 
 {% block scripts %}
 <script>
-$(document).ready(function() {
-  // Enhanced counter animation
-  $('.counter').each(function() {
-    const $this = $(this);
-    const target = parseInt($this.attr('data-target'));
+let vmStatsData = null;
+
+// Function to fetch VM statistics from API
+async function fetchVMStats() {
+  try {
+    const response = await fetch('/vms/api/stats');
+    if (!response.ok) {
+      throw new Error('Failed to fetch VM statistics');
+    }
+    vmStatsData = await response.json();
+    updateDashboardStats();
+  } catch (error) {
+    console.error('Error fetching VM stats:', error);
+    showToast('danger', 'Failed to load VM statistics');
+  }
+}
+
+// Function to update dashboard with VM statistics
+function updateDashboardStats() {
+  if (!vmStatsData) return;
+
+  // Update main statistics cards
+  updateCounter('#total-vms', vmStatsData.total_vms);
+  updateCounter('#powered-on', vmStatsData.power_stats.powered_on);
+  updateCounter('#powered-off', vmStatsData.power_stats.powered_off);
+
+  // Update percentages
+  const totalVMs = vmStatsData.total_vms;
+  const poweredOn = vmStatsData.power_stats.powered_on;
+  const poweredOff = vmStatsData.power_stats.powered_off;
+
+  if (totalVMs > 0) {
+    const poweredOnPercent = ((poweredOn / totalVMs) * 100).toFixed(1);
+    const poweredOffPercent = ((poweredOff / totalVMs) * 100).toFixed(1);
+
+    $('#powered-on-percentage').text(poweredOnPercent + '%');
+    $('#powered-off-percentage').text(poweredOffPercent + '%');
+    $('#powered-on-progress').css('width', poweredOnPercent + '%');
+    $('#powered-off-progress').css('width', poweredOffPercent + '%');
+  }
+
+  // Update OS breakdown
+  updateOSStats('windows', vmStatsData.os_breakdown.windows);
+  updateOSStats('linux', vmStatsData.os_breakdown.linux);
+  updateOSStats('other', vmStatsData.os_breakdown.other);
+
+  // Update additional metrics if available
+  if (vmStatsData.additional_metrics) {
+    updateCounter('#avg-cpu', vmStatsData.additional_metrics.avg_cpu || 0);
+    updateCounter('#avg-memory', Math.round(vmStatsData.additional_metrics.avg_memory_gb || 0));
+    updateCounter('#total-owners', vmStatsData.additional_metrics.total_owners || 0);
+    updateCounter('#total-tags', vmStatsData.additional_metrics.total_tags || 0);
+    updateCounter('#total-hypervisors', vmStatsData.additional_metrics.unique_hypervisors || 0);
+  }
+}
+
+// Function to update OS statistics
+function updateOSStats(osType, stats) {
+  updateCounter(`#${osType}-total`, stats.total);
+  updateCounter(`#${osType}-on`, stats.powered_on);
+  updateCounter(`#${osType}-off`, stats.powered_off);
+
+  // Update progress bars
+  if (stats.total > 0) {
+    const onPercent = ((stats.powered_on / stats.total) * 100).toFixed(1);
+    const offPercent = ((stats.powered_off / stats.total) * 100).toFixed(1);
     
-    $({ countNum: 0 }).animate({
+    $(`#${osType}-on-bar`).css('width', onPercent + '%');
+    $(`#${osType}-off-bar`).css('width', offPercent + '%');
+  }
+}
+
+// Enhanced counter animation function
+function updateCounter(selector, target) {
+  const $element = $(selector);
+  const currentValue = parseInt($element.text()) || 0;
+  
+  $({ countNum: currentValue }).animate({
       countNum: target
     }, {
-      duration: 2500,
+    duration: 1500,
       easing: 'easeOutCubic',
       step: function() {
-        $this.text(Math.floor(this.countNum));
+      $element.text(Math.floor(this.countNum));
       },
       complete: function() {
-        $this.text(target.toLocaleString());
-      }
-    });
+      $element.text(target.toLocaleString());
+    }
   });
+}
+
+// Global function to refresh VM stats
+window.refreshVMStats = function() {
+  fetchVMStats();
+};
+
+$(document).ready(function() {
+  // Load VM statistics on page load
+  fetchVMStats();
+  
+  // Set up auto-refresh every 2 minutes
+  setInterval(fetchVMStats, 120000);
   
   // Update timestamp with more realistic intervals
   function updateTimestamp() {
@@ -634,57 +719,97 @@ $(document).ready(function() {
     
     btn.html('<div class="loading me-2"></div>Refreshing...').prop('disabled', true);
     
-    // Simulate API call
-    setTimeout(() => {
+    // Refresh VM stats and audit logs
+    Promise.all([
+      fetchVMStats(),
+      fetchRecentAuditLogs()
+    ]).then(() => {
       btn.html(originalHtml).prop('disabled', false);
-      
-      // Re-animate counters
-      $('.counter').each(function() {
-        const $this = $(this);
-        const target = parseInt($this.attr('data-target'));
-        $this.text('0');
-        
-        $({ countNum: 0 }).animate({
-          countNum: target
-        }, {
-          duration: 1500,
-          step: function() {
-            $this.text(Math.floor(this.countNum));
-          },
-          complete: function() {
-            $this.text(target.toLocaleString());
-          }
-        });
-      });
-      
       updateTimestamp();
       showToast('success', 'Dashboard data refreshed successfully');
-    }, 2000);
-  };
-
-  // Dismiss alert function
-  window.dismissAlert = function(button) {
-    const alert = $(button).closest('.alert');
-    alert.fadeOut(300, function() {
-      $(this).remove();
-      updateAlertCount();
+    }).catch(() => {
+      btn.html(originalHtml).prop('disabled', false);
+      showToast('danger', 'Some data failed to refresh');
     });
   };
 
-  // Update alert count
-  function updateAlertCount() {
-    const alertCount = $('.alert-list .alert').length;
-    $('.card-header .badge').text(alertCount);
-    
-    if (alertCount === 0) {
-      $('.alert-list').html(`
+  // Function to fetch recent audit logs
+  async function fetchRecentAuditLogs() {
+    try {
+      const response = await fetch('/audit/api/recent');
+      if (!response.ok) {
+        throw new Error('Failed to fetch audit logs');
+      }
+      const logs = await response.json();
+      updateAuditFeed(logs);
+    } catch (error) {
+      console.error('Error fetching audit logs:', error);
+      $('#audit-feed').html(`
         <div class="text-center py-4">
-          <i class="bi bi-check-circle display-4 text-success mb-3"></i>
-          <h6 class="text-muted">No active alerts</h6>
-          <small class="text-muted">All systems are running smoothly</small>
+          <i class="bi bi-exclamation-triangle text-warning display-4 mb-3"></i>
+          <h6 class="text-muted">Unable to load recent activity</h6>
+          <small class="text-muted">Please try refreshing the page</small>
         </div>
       `);
     }
+  }
+
+  // Function to update audit feed
+  function updateAuditFeed(logs) {
+    if (!logs || logs.length === 0) {
+      $('#audit-feed').html(`
+        <div class="text-center py-4">
+          <i class="bi bi-check-circle text-success display-4 mb-3"></i>
+          <h6 class="text-muted">No recent activity</h6>
+          <small class="text-muted">System is quiet - no recent changes</small>
+        </div>
+      `);
+      return;
+    }
+
+    let html = '';
+    logs.slice(0, 5).forEach(log => {
+      const timeAgo = new Date(log.timestamp).toLocaleString();
+      const iconClass = getActionIcon(log.action);
+      const bgClass = getActionBgClass(log.action);
+      
+      html += `
+        <div class="activity-item d-flex align-items-start">
+          <div class="${bgClass} rounded-3 d-flex align-items-center justify-content-center me-3" style="width: 36px; height: 36px;">
+            <i class="bi ${iconClass} text-white"></i>
+          </div>
+          <div class="flex-grow-1">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+              <p class="mb-1 fw-medium">${log.action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
+              <small class="text-muted">${timeAgo}</small>
+            </div>
+            <small class="text-muted">${log.details || 'No additional details'}</small>
+          </div>
+        </div>
+      `;
+    });
+    
+    $('#audit-feed').html(html);
+  }
+
+  // Helper function to get icon for action type
+  function getActionIcon(action) {
+    if (action.includes('login')) return 'bi-person-check';
+    if (action.includes('vm')) return 'bi-hdd-network';
+    if (action.includes('owner')) return 'bi-people';
+    if (action.includes('tag')) return 'bi-tags';
+    if (action.includes('sync')) return 'bi-arrow-repeat';
+    return 'bi-activity';
+  }
+
+  // Helper function to get background class for action type
+  function getActionBgClass(action) {
+    if (action.includes('login')) return 'bg-success';
+    if (action.includes('vm')) return 'bg-primary';
+    if (action.includes('owner')) return 'bg-info';
+    if (action.includes('tag')) return 'bg-warning';
+    if (action.includes('sync')) return 'bg-secondary';
+    return 'bg-secondary';
   }
 
   // Toast notification function
@@ -715,79 +840,17 @@ $(document).ready(function() {
   // Make showToast available globally
   window.showToast = showToast;
 
-  // Simulate real-time updates
-  function simulateRealTimeUpdates() {
-    const activities = [
-      'VM web-server-02 powered on successfully',
-      'New VM database-01 discovered',
-      'Backup completed for vm-prod-01',
-      'Memory usage normalized on vm-test-03'
-    ];
-    
-    const icons = ['check-circle', 'info-circle', 'archive', 'cpu'];
-    const colors = ['success', 'info', 'secondary', 'primary'];
-    
-    setInterval(() => {
-      const randomIndex = Math.floor(Math.random() * activities.length);
-      const activity = activities[randomIndex];
-      const icon = icons[randomIndex];
-      const color = colors[randomIndex];
-      
-      const newActivity = `
-        <div class="activity-item d-flex align-items-start" style="display: none;">
-          <div class="bg-${color} rounded-3 d-flex align-items-center justify-content-center me-3" style="width: 36px; height: 36px; background: var(--${color}-gradient) !important;">
-            <i class="bi bi-${icon} text-white"></i>
-          </div>
-          <div class="flex-grow-1">
-            <div class="d-flex justify-content-between align-items-start mb-1">
-              <p class="mb-1 fw-medium">${activity}</p>
-              <small class="text-muted">Just now</small>
-            </div>
-            <small class="text-muted">Real-time system update</small>
-          </div>
-        </div>
-      `;
-      
-      $('.activity-feed').prepend(newActivity);
-      $('.activity-item').first().slideDown(300);
-      
-      // Keep only the latest 4 activities
-      if ($('.activity-item').length > 4) {
-        $('.activity-item').last().slideUp(300, function() {
-          $(this).remove();
-        });
-      }
-    }, 30000); // Every 30 seconds
-  }
-
-  // Start real-time updates simulation
-  simulateRealTimeUpdates();
+  // Load audit logs on page load
+  fetchRecentAuditLogs();
+  
+  // Set up auto-refresh for audit logs every 5 minutes
+  setInterval(fetchRecentAuditLogs, 300000);
 
   // Enhanced easing function
   $.easing.easeOutCubic = function (x, t, b, c, d) {
     return c*((t=t/d-1)*t*t + 1) + b;
   };
 
-  // Auto-update system health metrics
-  function updateHealthMetrics() {
-    const metrics = [
-      { selector: '.health-metrics .text-success', min: 25, max: 40 },
-      { selector: '.health-metrics .text-warning', min: 60, max: 75 },
-      { selector: '.health-metrics .text-success:last', min: 40, max: 50 }
-    ];
-
-    metrics.forEach((metric, index) => {
-      const newValue = Math.floor(Math.random() * (metric.max - metric.min + 1)) + metric.min;
-      const element = $(metric.selector).eq(index);
-      const progressBar = element.siblings('.progress').find('.progress-bar');
-      
-      element.text(newValue + '%');
-      progressBar.css('width', newValue + '%');
-    });
-  }
-
-  // Update health metrics every 2 minutes
-  setInterval(updateHealthMetrics, 120000);
 });
 </script>
 {% endblock %}
