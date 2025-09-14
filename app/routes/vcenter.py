@@ -103,12 +103,15 @@ def toggle_config(cfg_id):
 @require_roles('editor', 'superadmin')
 def manual_sync():
     def run_sync(app_instance):
+        from .. import db
         with app_instance.app_context():
             try:
                 sync_vcenter_job()
                 app_instance.logger.info("Manual vCenter sync completed successfully")
             except Exception as e:
                 app_instance.logger.error(f"Manual vCenter sync failed: {e}")
+            finally:
+                db.session.remove()  # ensure connections are returned
     
     thread = threading.Thread(target=run_sync, args=(current_app._get_current_object(),))
     thread.daemon = True

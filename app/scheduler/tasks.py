@@ -25,10 +25,22 @@ def sync_vcenter_job():
 
 def schedule_vcenter_sync(scheduler, app):
     interval_minutes = app.config.get('VCENTER_SYNC_INTERVAL', 30)
+
+    def job_wrapper():
+        # Ensure app context and session cleanup for background threads
+        from .. import db
+        with app.app_context():
+            try:
+                sync_vcenter_job()
+            finally:
+                db.session.remove()  # return connections to the pool
+
     scheduler.add_job(
-        func=lambda: app.app_context().push() or sync_vcenter_job(),
+        func=job_wrapper,
         trigger=IntervalTrigger(minutes=interval_minutes),
         id='vcenter_sync',
         replace_existing=True,
+        max_instances=1,
+        coalesce=True,
     )
 
