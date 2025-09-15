@@ -150,7 +150,7 @@
   <body>
     <!-- Top Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark">
-      <div class="container-fluid">
+      <div class="container">
         <a class="navbar-brand" href="#">
           <i class="bi bi-cloud-arrow-up me-2"></i>
           Nimbus
@@ -171,7 +171,7 @@
           {% if messages %}
             <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080;">
               {% for category, message in messages %}
-                <div class="toast align-items-center text-bg-{{ 'success' if category == 'success' else ('danger' if category == 'error' else 'info') }} border-0 show" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast align-items-center text-bg-{{ 'success' if category == 'success' else ('danger' if category == 'error' else 'danger') }} border-0 show" role="alert" aria-live="assertive" aria-atomic="true">
                   <div class="d-flex">
                     <div class="toast-body">
                       <i class="bi bi-{{ 'check-circle' if category == 'success' else ('exclamation-triangle' if category == 'error' else 'info-circle') }} me-2"></i>

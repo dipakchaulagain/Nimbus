@@ -169,14 +169,25 @@
       
       <div class="col-lg-2 col-md-6">
         <label class="form-label fw-semibold text-dark mb-2">
-          <i class="bi bi-memory me-2 text-primary"></i>Memory Range
+          <i class="bi bi-people me-2 text-primary"></i>Owner
         </label>
-        <select id="filterMemory" class="form-select">
-          <option value="">Any Size</option>
-          <option value="small">< 2GB</option>
-          <option value="medium">2GB - 8GB</option>
-          <option value="large">8GB - 16GB</option>
-          <option value="xlarge">> 16GB</option>
+        <select id="filterOwner" class="form-select">
+          <option value="">All Owners</option>
+          {% for owner in owners %}
+            <option value="{{ owner.name }}">{{ owner.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-lg-2 col-md-6">
+        <label class="form-label fw-semibold text-dark mb-2">
+          <i class="bi bi-tags me-2 text-primary"></i>Tag
+        </label>
+        <select id="filterTag" class="form-select">
+          <option value="">All Tags</option>
+          {% for tag in tags %}
+            <option value="{{ tag.name }}">{{ tag.name }}</option>
+          {% endfor %}
         </select>
       </div>
       
@@ -324,6 +335,10 @@
                 {% if vm.owners %}
                   <span class="badge rounded-pill px-3 py-2" style="background: var(--info-gradient); color: white;">{{ vm.owners|length }}</span>
                   <small class="text-muted">owners</small>
+                  <!-- Hidden owner names for filtering/search -->
+                  <span class="d-none owners-names">
+                    {% for o in vm.owners %}{{ o.name }}{% if not loop.last %}, {% endif %}{% endfor %}
+                  </span>
                 {% else %}
                   <span class="text-muted">No owners</span>
                 {% endif %}
@@ -334,6 +349,10 @@
                 {% if vm.tags %}
                   <span class="badge bg-secondary rounded-pill px-3 py-2">{{ vm.tags|length }}</span>
                   <small class="text-muted">tags</small>
+                  <!-- Hidden tag names for filtering/search -->
+                  <span class="d-none tags-names">
+                    {% for t in vm.tags %}{{ t.name }}{% if not loop.last %}, {% endif %}{% endfor %}
+                  </span>
                 {% else %}
                   <span class="text-muted">No tags</span>
                 {% endif %}
@@ -627,20 +646,21 @@ $(function(){
     table.column(4).search(this.value).draw();
   });
 
-  $('#filterMemory').on('change', function() {
+  // Owner filter: matches owner name within Owners column
+  $('#filterOwner').on('change', function() {
     const value = this.value;
-    if (value === '') {
-      table.column(3).search('').draw();
-    } else {
-      // This would need custom filtering logic based on memory ranges
-      // For now, just search the column
-      table.column(3).search(value).draw();
-    }
+    table.column(6).search(value).draw();
+  });
+
+  // Tag filter: matches tag name within Tags column
+  $('#filterTag').on('change', function() {
+    const value = this.value;
+    table.column(7).search(value).draw();
   });
 
   $('#clearFilters').on('click', function() {
     $('#filterName, #filterHypervisor').val('');
-    $('#filterPower, #filterOS, #filterMemory').val('');
+    $('#filterPower, #filterOS, #filterOwner, #filterTag').val('');
     table.search('').columns().search('').draw();
   });
 

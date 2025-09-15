@@ -15,7 +15,9 @@ vm_bp = Blueprint('vm', __name__)
 @login_required
 def list_vms():
     vms = VM.query.order_by(VM.name.asc()).all()
-    return render_template('vms/list.html', vms=vms)
+    owners = Owner.query.order_by(Owner.name.asc()).all()
+    tags = Tag.query.order_by(Tag.name.asc()).all()
+    return render_template('vms/list.html', vms=vms, owners=owners, tags=tags)
 
 
 @vm_bp.route('/api')

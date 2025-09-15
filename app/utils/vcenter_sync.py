@@ -134,7 +134,29 @@ def upsert_vm_records(vms: List[Dict]) -> int:
     from .. import db
     updated = 0
     for data in vms:
-        vm = VM.query.get(data["vm_id"]) or VM(id=data["vm_id"], name=data["name"])
+        vm_id = data.get("vm_id")
+        vm_name = data.get("name")
+
+        # Handle missing vm_id
+        if not vm_id:
+            if not vm_name:
+                current_app.logger.warning("Skipping VM with missing vm_id and name")
+                continue
+            # Check if a VM with the same name exists
+            with db.session.no_autoflush:
+                vm = VM.query.filter_by(name=vm_name).first()
+            if vm:
+                current_app.logger.info(f"Found existing VM with name '{vm_name}', using id '{vm.id}'")
+                vm_id = vm.id
+            else:
+                # Generate a new UUID if no existing VM is found
+                vm_id = str(uuid.uuid4())
+                current_app.logger.warning(f"Generated new vm_id '{vm_id}' for VM '{vm_name}' with missing instanceUuid")
+
+        # Query for existing VM or create new one
+        with db.session.no_autoflush:
+            vm = VM.query.get(vm_id) or VM(id=vm_id, name=vm_name)
+
         vm.name = data.get("name")
         vm.cpu = data.get("cpu")
         vm.memory_mb = data.get("memoryMB")
@@ -146,7 +168,7 @@ def upsert_vm_records(vms: List[Dict]) -> int:
         vm.created_date = cd if isinstance(cd, datetime) else None
         vm.last_booted_date = bd if isinstance(bd, datetime) else None
 
-        # replace children
+        # Replace children
         vm.disks.clear()
         for d in data.get("assigned_disks", []):
             vm.disks.append(VMDisks(label=d.get("label"), size_gb=d.get("size_gb")))
