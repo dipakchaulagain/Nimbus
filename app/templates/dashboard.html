@@ -264,15 +264,6 @@
             </h5>
             <small class="text-muted">Frequently used management tasks</small>
           </div>
-          <div class="dropdown">
-            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown">
-              <i class="bi bi-three-dots"></i>
-            </button>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Customize</a></li>
-              <li><a class="dropdown-item" href="#"><i class="bi bi-sliders me-2"></i>Settings</a></li>
-            </ul>
-          </div>
         </div>
       </div>
       <div class="card-body">
@@ -322,12 +313,14 @@
             </a>
           </div>
         </div>
+        {% if current_user.role == 'superadmin' %}
         <div class="mt-4">
           <a href="/admins/" class="btn btn-primary w-100 btn-lg">
             <i class="bi bi-shield-check me-2"></i>
             Admin Management
           </a>
         </div>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -389,7 +382,7 @@
     </div>
   </div>
 </div>
-
+{% if current_user.role == 'superadmin' %}
 <!-- Recent Audit Logs -->
 <div class="row g-4 mt-2">
   <div class="col-12">
@@ -428,6 +421,7 @@
     </div>
   </div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block extra_css %}
