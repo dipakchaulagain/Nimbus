@@ -133,10 +133,11 @@ def fetch_vms_from_vcenter(cfg: VCenterConfig) -> List[Dict]:
 def upsert_vm_records(vms: List[Dict]) -> int:
     from .. import db
     updated = 0
+    changed = 0
+    
     for data in vms:
         vm_id = data.get("vm_id")
         vm_name = data.get("name")
-
         # Handle missing vm_id
         if not vm_id:
             if not vm_name:
@@ -155,40 +156,100 @@ def upsert_vm_records(vms: List[Dict]) -> int:
 
         # Query for existing VM or create new one
         with db.session.no_autoflush:
-            vm = VM.query.get(vm_id) or VM(id=vm_id, name=vm_name)
+            vm = VM.query.get(vm_id)
+            is_new = vm is None
+            if is_new:
+                vm = VM(id=vm_id, name=vm_name)
+                db.session.add(vm)
+                updated += 1
+                changed += 1
+                current_app.logger.info(f"Created new VM: {vm_name} ({vm_id})")
 
-        vm.name = data.get("name")
-        vm.cpu = data.get("cpu")
-        vm.memory_mb = data.get("memoryMB")
-        vm.guest_os = data.get("guestOS")
-        vm.power_state = str(data.get("power_state"))
-        vm.hypervisor = data.get("hypervisor")
-        cd = data.get("created_date")
-        bd = data.get("last_booted_date")
-        vm.created_date = cd if isinstance(cd, datetime) else None
-        vm.last_booted_date = bd if isinstance(bd, datetime) else None
-
-        # Replace children
-        vm.disks.clear()
-        for d in data.get("assigned_disks", []):
-            vm.disks.append(VMDisks(label=d.get("label"), size_gb=d.get("size_gb")))
-
-        vm.nics.clear()
-        for n in data.get("nics", []):
-            vm.nics.append(
-                VMNic(
-                    label=n.get("label"),
-                    mac=n.get("mac"),
-                    network=n.get("network"),
-                    connected=bool(n.get("connected")),
-                    nic_type=n.get("nic_type"),
-                    ip_addresses=n.get("ip_addresses"),
-                )
-            )
-
-        db.session.add(vm)
-        updated += 1
+        # Check if any fields have changed (only for existing VMs)
+        if not is_new:
+            fields_changed = False
+            
+            # Check basic fields
+            if vm.name != data.get("name"):
+                vm.name = data.get("name")
+                fields_changed = True
+            
+            if vm.cpu != data.get("cpu"):
+                vm.cpu = data.get("cpu")
+                fields_changed = True
+            
+            memory_mb = data.get("memoryMB") or 0  # Handle None values
+            if vm.memory_mb != memory_mb:
+                vm.memory_mb = memory_mb
+                fields_changed = True
+            
+            if vm.guest_os != data.get("guestOS"):
+                vm.guest_os = data.get("guestOS")
+                fields_changed = True
+            
+            power_state = str(data.get("power_state"))
+            if vm.power_state != power_state:
+                vm.power_state = power_state
+                fields_changed = True
+            
+            if vm.hypervisor != data.get("hypervisor"):
+                vm.hypervisor = data.get("hypervisor")
+                fields_changed = True
+            
+            # Handle dates
+            cd = data.get("created_date")
+            bd = data.get("last_booted_date")
+            created_date = cd if isinstance(cd, datetime) else None
+            last_booted_date = bd if isinstance(bd, datetime) else None
+            
+            if vm.created_date != created_date:
+                vm.created_date = created_date
+                fields_changed = True
+            
+            if vm.last_booted_date != last_booted_date:
+                vm.last_booted_date = last_booted_date
+                fields_changed = True
+            
+            # Check disks
+            current_disks = {(d.label, d.size_gb) for d in vm.disks}
+            new_disks = {(d.get("label"), d.get("size_gb")) for d in data.get("assigned_disks", [])}
+            
+            if current_disks != new_disks:
+                vm.disks.clear()
+                for d in data.get("assigned_disks", []):
+                    vm.disks.append(VMDisks(label=d.get("label"), size_gb=d.get("size_gb")))
+                fields_changed = True
+            
+            # Check nics
+            current_nics = {(n.label, n.mac, n.network, n.connected, n.nic_type, tuple(n.ip_addresses) if n.ip_addresses else ()) 
+                           for n in vm.nics}
+            new_nics = {(n.get("label"), n.get("mac"), n.get("network"), bool(n.get("connected")), n.get("nic_type"), 
+                        tuple(n.get("ip_addresses", [])) if n.get("ip_addresses") else ()) 
+                       for n in data.get("nics", [])}
+            
+            if current_nics != new_nics:
+                vm.nics.clear()
+                for n in data.get("nics", []):
+                    vm.nics.append(
+                        VMNic(
+                            label=n.get("label"),
+                            mac=n.get("mac"),
+                            network=n.get("network"),
+                            connected=bool(n.get("connected")),
+                            nic_type=n.get("nic_type"),
+                            ip_addresses=n.get("ip_addresses"),
+                        )
+                    )
+                fields_changed = True
+            
+            if fields_changed:
+                changed += 1
+                updated += 1
+                current_app.logger.debug(f"Updated VM: {vm_name} ({vm_id})")
+            # else:
+            #     current_app.logger.debug(f"No changes for VM: {vm_name} ({vm_id})")
 
     db.session.commit()
+    current_app.logger.info(f"Sync completed: {updated} VMs processed, {changed} had changes")
     return updated
 

@@ -29,12 +29,6 @@
         {% endif %}
       </ul>
     </div>
-    <a href="/reports/summary" class="btn btn-outline-info btn-lg">
-      <i class="bi bi-file-earmark-text me-2"></i>Summary
-    </a>
-    <a href="/vms/api" class="btn btn-outline-primary btn-lg">
-      <i class="bi bi-code-square me-2"></i>API
-    </a>
     <button class="btn btn-success btn-lg" onclick="refreshVMs()">
       <i class="bi bi-arrow-clockwise me-2"></i>Refresh
     </button>
@@ -123,7 +117,7 @@
   </div>
   <div class="card-body">
     <div class="row g-3 align-items-end">
-      <div class="col-lg-3 col-md-6">
+      <div class="col-lg-2 col-md-6">
         <label class="form-label fw-semibold text-dark mb-2">
           <i class="bi bi-search me-2 text-primary"></i>Search VMs
         </label>
@@ -191,11 +185,11 @@
         </select>
       </div>
       
-      <div class="col-lg-1 col-md-6">
+      <!-- <div class="col-lg-1 col-md-6">
         <button id="clearFilters" class="btn btn-outline-secondary w-100 btn-lg" title="Clear all filters">
           <i class="bi bi-funnel-fill"></i>
         </button>
-      </div>
+      </div> -->
     </div>
   </div>
 </div>
@@ -309,22 +303,34 @@
             </td>
             <td class="py-3">
               <div class="text-dark">
-                <div><i class="bi bi-cpu me-1"></i>{{ vm.cpu }} vCPU</div>
-                <small class="text-muted"><i class="bi bi-memory me-1"></i>{{ (vm.memory_mb / 1024)|round(1) }}GB RAM</small>
+                <div>
+                  <i class="bi bi-cpu me-1"></i> {{ vm.cpu if vm.cpu is not none else "Error!" }} vCPU
+                </div>
+                <small class="text-muted">
+                  <i class="bi bi-memory me-1"></i> {{ (vm.memory_mb / 1024)|round(1) if vm.memory_mb else "Error!" }} GB RAM
+                </small>
               </div>
             </td>
             <td class="py-3">
               <div class="d-flex align-items-center">
-                {% if 'windows' in vm.guest_os.lower() %}
-                  <i class="bi bi-windows text-primary me-2 fs-5"></i>
-                {% elif 'linux' in vm.guest_os.lower() %}
-                  <i class="bi bi-terminal text-warning me-2 fs-5"></i>
+                {% if vm.guest_os %}
+                  {% set os_lower = vm.guest_os.lower() %}
+                  {% if 'windows' in os_lower %}
+                    <i class="bi bi-windows text-primary me-2 fs-5"></i>
+                  {% elif 'linux' in os_lower %}
+                    <i class="bi bi-terminal text-warning me-2 fs-5"></i>
+                  {% else %}
+                    <i class="bi bi-laptop me-2 fs-5"></i>
+                  {% endif %}
+                  <div>
+                    <div class="text-dark">{{ vm.guest_os }}</div>
+                  </div>
                 {% else %}
-                  <i class="bi bi-laptop me-2 fs-5"></i>
+                  <i class="bi bi-exclamation-triangle text-danger me-2 fs-5"></i>
+                  <div>
+                    <div class="text-dark">Error!</div>
+                  </div>
                 {% endif %}
-                <div>
-                  <div class="text-dark">{{ vm.guest_os }}</div>
-                </div>
               </div>
             </td>
             <td class="py-3">
@@ -1270,17 +1276,16 @@ $(function(){
 
     const vmCount = selectedVMs.length;
     const actionMap = {
-      'power-on': 'Power On',
-      'power-off': 'Power Off',
       'assign-owners': 'Assign Owners to',
       'assign-tags': 'Assign Tags to'
     };
 
     const actionText = actionMap[action] || action;
-    if (confirm(`Are you sure you want to ${actionText.toLowerCase()} ${vmCount} selected VM(s)?`)) {
-      showToast('info', `${actionText} ${vmCount} VM(s)...`);
-      // Add your bulk action logic here
-    }
+    showToast('info', `The feature is comming soon! Please check back later.`);
+    // if (confirm(`Are you sure you want to ${actionText.toLowerCase()} ${vmCount} selected VM(s)?`)) {
+    //   showToast('info', `${actionText} ${vmCount} VM(s)...`);
+    //   // Add your bulk action logic here
+    // }
   };
 
   window.refreshVMs = function() {
