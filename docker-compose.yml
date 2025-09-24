@@ -1,37 +1,39 @@
 services:
   web:
+    container_name: nimbus_app
     build: .
-    # ports:
-    #   - "5000:5000"
     environment:
       - FLASK_ENV=${FLASK_ENV:-production}
       - DATABASE_URL=${DATABASE_URL}
       - SECRET_KEY=${SECRET_KEY}
       - VCENTER_SYNC_INTERVAL=${VCENTER_SYNC_INTERVAL:-30}
+      - TZ=Asia/Kathmandu
     depends_on:
       - db
-    volumes:
-      - .:/app
+    networks:
+      - prod-net
     command: gunicorn --workers ${WEB_CONCURRENCY:-2} --bind 0.0.0.0:5000 run:app
+    extra_hosts:
+      - "vmmanage.dishhome.com.np:192.168.48.170"
 
   db:
+    container_name: nimbus_db
     image: postgres:16
     environment:
       - POSTGRES_DB=vm_inventory
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=password
+      - TZ=Asia/Kathmandu
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    # ports:
-    #   - "5432:5432"
-
-  nginx:
-    build: ./nginx
-    ports:
-      - "80:80"
-    depends_on:
-      - web
+    networks:
+      - prod-net
 
 volumes:
   postgres_data:
+
+networks:
+  prod-net:
+    external: true
+    name: prod-net
 

@@ -129,20 +129,23 @@ def fetch_vms_from_vcenter(cfg: VCenterConfig) -> List[Dict]:
     Disconnect(si)
     return vm_list
 
-
 def upsert_vm_records(vms: List[Dict]) -> int:
     from .. import db
     updated = 0
     changed = 0
-    
+    skipped = 0
+
     for data in vms:
         vm_id = data.get("vm_id")
         vm_name = data.get("name")
+
         # Handle missing vm_id
         if not vm_id:
             if not vm_name:
                 current_app.logger.warning("Skipping VM with missing vm_id and name")
+                skipped += 1
                 continue
+
             # Check if a VM with the same name exists
             with db.session.no_autoflush:
                 vm = VM.query.filter_by(name=vm_name).first()
@@ -150,9 +153,9 @@ def upsert_vm_records(vms: List[Dict]) -> int:
                 current_app.logger.info(f"Found existing VM with name '{vm_name}', using id '{vm.id}'")
                 vm_id = vm.id
             else:
-                # Generate a new UUID if no existing VM is found
-                vm_id = str(uuid.uuid4())
-                current_app.logger.warning(f"Generated new vm_id '{vm_id}' for VM '{vm_name}' with missing instanceUuid")
+                current_app.logger.warning(f"Skipping VM '{vm_name}' due to missing vm_id")
+                skipped += 1
+                continue
 
         # Query for existing VM or create new one
         with db.session.no_autoflush:
@@ -168,65 +171,75 @@ def upsert_vm_records(vms: List[Dict]) -> int:
         # Check if any fields have changed (only for existing VMs)
         if not is_new:
             fields_changed = False
-            
+
             # Check basic fields
             if vm.name != data.get("name"):
                 vm.name = data.get("name")
                 fields_changed = True
-            
+
             if vm.cpu != data.get("cpu"):
                 vm.cpu = data.get("cpu")
                 fields_changed = True
-            
+
             memory_mb = data.get("memoryMB") or 0  # Handle None values
             if vm.memory_mb != memory_mb:
                 vm.memory_mb = memory_mb
                 fields_changed = True
-            
+
             if vm.guest_os != data.get("guestOS"):
                 vm.guest_os = data.get("guestOS")
                 fields_changed = True
-            
+
             power_state = str(data.get("power_state"))
             if vm.power_state != power_state:
                 vm.power_state = power_state
                 fields_changed = True
-            
+
             if vm.hypervisor != data.get("hypervisor"):
                 vm.hypervisor = data.get("hypervisor")
                 fields_changed = True
-            
+
             # Handle dates
             cd = data.get("created_date")
             bd = data.get("last_booted_date")
             created_date = cd if isinstance(cd, datetime) else None
             last_booted_date = bd if isinstance(bd, datetime) else None
-            
+
             if vm.created_date != created_date:
                 vm.created_date = created_date
                 fields_changed = True
-            
+
             if vm.last_booted_date != last_booted_date:
                 vm.last_booted_date = last_booted_date
                 fields_changed = True
-            
+
             # Check disks
             current_disks = {(d.label, d.size_gb) for d in vm.disks}
             new_disks = {(d.get("label"), d.get("size_gb")) for d in data.get("assigned_disks", [])}
-            
+
             if current_disks != new_disks:
                 vm.disks.clear()
                 for d in data.get("assigned_disks", []):
                     vm.disks.append(VMDisks(label=d.get("label"), size_gb=d.get("size_gb")))
                 fields_changed = True
-            
+
             # Check nics
-            current_nics = {(n.label, n.mac, n.network, n.connected, n.nic_type, tuple(n.ip_addresses) if n.ip_addresses else ()) 
-                           for n in vm.nics}
-            new_nics = {(n.get("label"), n.get("mac"), n.get("network"), bool(n.get("connected")), n.get("nic_type"), 
-                        tuple(n.get("ip_addresses", [])) if n.get("ip_addresses") else ()) 
-                       for n in data.get("nics", [])}
-            
+            current_nics = {
+                (n.label, n.mac, n.network, n.connected, n.nic_type, tuple(n.ip_addresses) if n.ip_addresses else ())
+                for n in vm.nics
+            }
+            new_nics = {
+                (
+                    n.get("label"),
+                    n.get("mac"),
+                    n.get("network"),
+                    bool(n.get("connected")),
+                    n.get("nic_type"),
+                    tuple(n.get("ip_addresses", [])) if n.get("ip_addresses") else (),
+                )
+                for n in data.get("nics", [])
+            }
+
             if current_nics != new_nics:
                 vm.nics.clear()
                 for n in data.get("nics", []):
@@ -241,15 +254,15 @@ def upsert_vm_records(vms: List[Dict]) -> int:
                         )
                     )
                 fields_changed = True
-            
+
             if fields_changed:
                 changed += 1
                 updated += 1
                 current_app.logger.debug(f"Updated VM: {vm_name} ({vm_id})")
-            # else:
-            #     current_app.logger.debug(f"No changes for VM: {vm_name} ({vm_id})")
 
     db.session.commit()
-    current_app.logger.info(f"Sync completed: {updated} VMs processed, {changed} had changes")
+    current_app.logger.info(
+        f"Sync completed: {updated} VMs processed, {changed} had changes, {skipped} skipped"
+    )
     return updated
 
