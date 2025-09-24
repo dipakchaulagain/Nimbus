@@ -6,21 +6,52 @@ from ..models.vcenter import VCenterConfig
 
 def sync_vcenter_job():
     from flask import current_app
-    configs = VCenterConfig.query.filter_by(enabled=True).all()
-    
-    if not configs:
-        current_app.logger.info("No enabled vCenter configurations found")
+    from sqlalchemy import text
+    from .. import db
+
+    # Prevent concurrent syncs across threads/processes using a DB advisory lock
+    LOCK_KEY = 872345  # arbitrary constant for vcenter sync
+    try:
+        acquired = db.session.execute(text("SELECT pg_try_advisory_lock(:k)"), {"k": LOCK_KEY}).scalar()
+    except Exception as e:
+        current_app.logger.error(f"Failed to try advisory lock: {e}")
         return
-    
-    for cfg in configs:
+
+    if not acquired:
+        current_app.logger.info("vCenter sync skipped: another sync is in progress")
+        return
+
+    try:
+        configs = VCenterConfig.query.filter_by(enabled=True).all()
+        
+        if not configs:
+            current_app.logger.info("No enabled vCenter configurations found")
+            return
+        
+        for cfg in configs:
+            try:
+                current_app.logger.info(f"Starting sync for vCenter: {cfg.name}")
+                vms = fetch_vms_from_vcenter(cfg)
+                updated_count = upsert_vm_records(vms)
+                current_app.logger.info(f"Sync completed for {cfg.name}: {updated_count} VMs updated")
+            except Exception as e:
+                # Reset session so future iterations/requests are not poisoned
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+                current_app.logger.error(f"Sync failed for {cfg.name}: {e}")
+                continue
+    finally:
         try:
-            current_app.logger.info(f"Starting sync for vCenter: {cfg.name}")
-            vms = fetch_vms_from_vcenter(cfg)
-            updated_count = upsert_vm_records(vms)
-            current_app.logger.info(f"Sync completed for {cfg.name}: {updated_count} VMs updated")
-        except Exception as e:
-            current_app.logger.error(f"Sync failed for {cfg.name}: {e}")
-            continue
+            db.session.execute(text("SELECT pg_advisory_unlock(:k)"), {"k": LOCK_KEY})
+            db.session.commit()
+        except Exception:
+            # In case of transaction state errors, make best effort to rollback
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
 
 
 def schedule_vcenter_sync(scheduler, app):
